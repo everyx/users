@@ -30,6 +30,10 @@ type DefaultSessionStore struct {
 	SessionOpts *sessions.Options
 }
 
+func (ds *DefaultSessionStore) Close() error {
+	return ds.Client.Close()
+}
+
 // Get returns a session for the given name after adding it to the registry.
 func (ds *DefaultSessionStore) Get(r *http.Request, name string) (*sessions.Session, error) {
 	return sessions.GetRegistry(r).Get(ds, name)

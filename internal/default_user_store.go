@@ -6,7 +6,6 @@ import (
 
 	"github.com/adnaan/users/internal/models"
 	"github.com/adnaan/users/internal/models/user"
-	"github.com/fatih/structs"
 	"github.com/google/uuid"
 )
 
@@ -45,50 +44,76 @@ func (d *DefaultUserStore) New(email, password string, meta map[string]interface
 	return usr.ID.String(), nil
 }
 
-func (d *DefaultUserStore) GetUser(id string) (map[string]interface{}, error) {
+func (d *DefaultUserStore) UserData(id string) (string, map[string]interface{}, error) {
 	usr, err := d.getUser(id)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	usr.Password = ""
 
-	return structs.Map(usr), err
+	return usr.Email, usr.Metadata, nil
 }
 
-func (d *DefaultUserStore) GetUserByEmail(email string) (map[string]interface{}, error) {
+func (d *DefaultUserStore) UserIDByEmail(email string) (string, error) {
 	usr, err := d.Client.User.Query().Where(user.Email(email)).Only(d.Ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return structs.Map(usr), err
+	return usr.ID.String(), nil
 }
 
-func (d *DefaultUserStore) GetUserByConfirmationToken(token string) (map[string]interface{}, error) {
+func (d *DefaultUserStore) UserIDByConfirmationToken(token string) (string, error) {
 	usr, err := d.Client.User.Query().Where(user.ConfirmationToken(token)).Only(d.Ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return structs.Map(usr), err
+	return usr.ID.String(), nil
 }
 
-func (d *DefaultUserStore) GetUserByRecoveryToken(token string) (map[string]interface{}, error) {
+func (d *DefaultUserStore) UserIDByRecoveryToken(token string) (string, error) {
 	usr, err := d.Client.User.Query().Where(user.RecoveryToken(token)).Only(d.Ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return structs.Map(usr), err
+	return usr.ID.String(), nil
 }
 
-func (d *DefaultUserStore) GetUserByEmailChangeToken(token string) (map[string]interface{}, error) {
+func (d *DefaultUserStore) UserIDByEmailChangeToken(token string) (string, error) {
 	usr, err := d.Client.User.Query().Where(user.EmailChangeToken(token)).Only(d.Ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return structs.Map(usr), err
+	return usr.ID.String(), nil
+}
+
+func (d *DefaultUserStore) GetPassword(id string) (string, error) {
+	usr, err := d.getUser(id)
+	if err != nil {
+		return "", err
+	}
+
+	return usr.Password, nil
+}
+
+func (d *DefaultUserStore) GetEmailChange(id string) (string, error) {
+	usr, err := d.getUser(id)
+	if err != nil {
+		return "", err
+	}
+
+	return usr.EmailChange, nil
+}
+
+func (d *DefaultUserStore) IsEmailConfirmed(id string) (bool, error) {
+	usr, err := d.getUser(id)
+	if err != nil {
+		return false, err
+	}
+
+	return usr.Confirmed, nil
 }
 
 func (d *DefaultUserStore) DeleteUser(id string) error {
@@ -169,7 +194,7 @@ func (d *DefaultUserStore) DeleteConfirmToken(id string) error {
 	if err != nil {
 		return err
 	}
-	_, err = u.SetNillableConfirmationToken(nil).SetNillableConfirmationSentAt(nil).Save(d.Ctx)
+	_, err = u.ClearConfirmationToken().ClearConfirmationSentAt().Save(d.Ctx)
 	if err != nil {
 		return err
 	}
@@ -208,7 +233,7 @@ func (d *DefaultUserStore) DeleteRecoveryToken(id string) error {
 	if err != nil {
 		return err
 	}
-	_, err = u.SetNillableRecoveryToken(nil).SetNillableRecoverySentAt(nil).Save(d.Ctx)
+	_, err = u.ClearRecoveryToken().ClearRecoverySentAt().Save(d.Ctx)
 	if err != nil {
 		return err
 	}
@@ -245,7 +270,8 @@ func (d *DefaultUserStore) DeleteEmailChangeToken(id string) error {
 	if err != nil {
 		return err
 	}
-	_, err = u.SetNillableEmailChangeToken(nil).SetNillableEmailChangeSentAt(nil).Save(d.Ctx)
+
+	_, err = u.ClearEmailChangeToken().ClearEmailChangeSentAt().Save(d.Ctx)
 	if err != nil {
 		return err
 	}
@@ -322,4 +348,8 @@ func (d *DefaultUserStore) SetLastSignInAt(id string, time time.Time) error {
 		return err
 	}
 	return nil
+}
+
+func (d *DefaultUserStore) Close() error {
+	return d.Client.Close()
 }

@@ -3,6 +3,9 @@ package schema
 import (
 	"time"
 
+	"github.com/facebook/ent/dialect/entsql"
+	"github.com/facebook/ent/schema"
+
 	"github.com/facebook/ent"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
@@ -11,6 +14,13 @@ import (
 // User holds the schema definition for the User entity.
 type User struct {
 	ent.Schema
+}
+
+// Annotations of the User.
+func (User) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		entsql.Annotation{Table: "usersx"},
+	}
 }
 
 // Fields of the User.

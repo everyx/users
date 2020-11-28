@@ -21,7 +21,7 @@ const (
 	FieldExpiresAt = "expires_at"
 
 	// Table holds the table name of the session in the database.
-	Table = "sessions"
+	Table = "Sessionsx"
 )
 
 // Columns holds all SQL columns for session fields.

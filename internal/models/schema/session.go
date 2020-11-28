@@ -3,6 +3,9 @@ package schema
 import (
 	"time"
 
+	"github.com/facebook/ent/dialect/entsql"
+	"github.com/facebook/ent/schema"
+
 	"github.com/facebook/ent"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
@@ -11,6 +14,12 @@ import (
 // Session holds the schema definition for the Session entity.
 type Session struct {
 	ent.Schema
+}
+
+func (Session) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		entsql.Annotation{Table: "sessionsx"},
+	}
 }
 
 // Fields of the Session.

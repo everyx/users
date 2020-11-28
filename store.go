@@ -10,6 +10,7 @@ import (
 	"github.com/adnaan/users/internal"
 
 	"github.com/adnaan/users/internal/models"
+	_ "github.com/lib/pq"
 )
 
 const defaultMaxAge = 60 * 60 * 24 * 30 // 30 days
@@ -19,12 +20,16 @@ const defaultPath = "/"
 type UserStore interface {
 	// Create, Delete
 	New(email, password string, meta map[string]interface{}) (string, error)
-	GetUser(id string) (map[string]interface{}, error)
-	GetUserByEmail(email string) (map[string]interface{}, error)
-	GetUserByConfirmationToken(token string) (map[string]interface{}, error)
-	GetUserByRecoveryToken(token string) (map[string]interface{}, error)
-	GetUserByEmailChangeToken(token string) (map[string]interface{}, error)
+	UserData(id string) (string, map[string]interface{}, error)
+	UserIDByEmail(email string) (string, error)
+	UserIDByConfirmationToken(token string) (string, error)
+	UserIDByRecoveryToken(token string) (string, error)
+	UserIDByEmailChangeToken(token string) (string, error)
 	DeleteUser(id string) error
+
+	GetPassword(id string) (string, error)
+	GetEmailChange(id string) (string, error)
+	IsEmailConfirmed(id string) (bool, error)
 
 	// Update Password
 	UpdatePassword(id, password string) error
@@ -55,6 +60,12 @@ type UserStore interface {
 	// Timestamps
 	SetUpdatedAt(id string, time time.Time) error
 	SetLastSignInAt(id string, time time.Time) error
+	Close() error
+}
+
+type SessionsStore interface {
+	sessions.Store
+	Close() error
 }
 
 func NewDefaultUserStore(ctx context.Context, driver, dataSource string) (UserStore, error) {
@@ -62,12 +73,18 @@ func NewDefaultUserStore(ctx context.Context, driver, dataSource string) (UserSt
 	if err != nil {
 		return nil, err
 	}
+	if err := client.Schema.Create(ctx); err != nil {
+		return nil, err
+	}
 	return &internal.DefaultUserStore{Ctx: ctx, Client: client, Driver: driver, DataSource: dataSource}, nil
 }
 
-func NewDefaultSessionStore(ctx context.Context, driver, dataSource string, keyPairs ...[]byte) (sessions.Store, error) {
+func NewDefaultSessionStore(ctx context.Context, driver, dataSource string, keyPairs ...[]byte) (SessionsStore, error) {
 	client, err := models.Open(driver, dataSource)
 	if err != nil {
+		return nil, err
+	}
+	if err := client.Schema.Create(ctx); err != nil {
 		return nil, err
 	}
 	return &internal.DefaultSessionStore{Ctx: ctx, Client: client, Driver: driver, DataSource: dataSource,

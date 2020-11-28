@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
-	"github.com/gorilla/sessions"
 	"github.com/mholt/binding"
 )
 
@@ -25,7 +24,15 @@ const (
 	ctxUserIdKey    = "key_user_id"
 )
 
-func NewAPI(ctx context.Context, userStore UserStore, sessionStore sessions.Store) (*API, error) {
+func NewDefaultAPI(ctx context.Context, driver, dataSource string) (*API, error) {
+	userStore, err := NewDefaultUserStore(ctx, driver, dataSource)
+	if err != nil {
+		return nil, err
+	}
+	sessionStore, err := NewDefaultSessionStore(ctx, driver, dataSource)
+	if err != nil {
+		return nil, err
+	}
 
 	return &API{
 		ctx:          ctx,
@@ -34,10 +41,18 @@ func NewAPI(ctx context.Context, userStore UserStore, sessionStore sessions.Stor
 	}, nil
 }
 
+func NewAPI(ctx context.Context, userStore UserStore, sessionStore SessionsStore) *API {
+	return &API{
+		ctx:          ctx,
+		userStore:    userStore,
+		sessionStore: sessionStore,
+	}
+}
+
 type API struct {
 	ctx          context.Context
 	userStore    UserStore
-	sessionStore sessions.Store
+	sessionStore SessionsStore
 }
 
 type SignupData struct {
@@ -46,7 +61,7 @@ type SignupData struct {
 	Metadata map[string]interface{} `json:"metadata"`
 }
 
-func (s *SignupData) Bind(r *http.Request) error {
+func (s *SignupData) Bind(_ *http.Request) error {
 	return nil
 }
 
@@ -55,12 +70,12 @@ type LoginData struct {
 	Password string `json:"password"`
 }
 
-func (l *LoginData) Bind(r *http.Request) error {
+func (l *LoginData) Bind(_ *http.Request) error {
 	return nil
 }
 
 // Fieldmap for the LoginData
-func (l *LoginData) FieldMap(req *http.Request) binding.FieldMap {
+func (l *LoginData) FieldMap(_ *http.Request) binding.FieldMap {
 	return binding.FieldMap{
 		&l.Email: binding.Field{
 			Form:     "email",
@@ -139,7 +154,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isEmailValid(signupData.Email) {
+	if !isEmailValid(signupData.Email) {
 		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid email")))
 		return
 	}
@@ -211,23 +226,39 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isEmailValid(loginData.Email) {
+	if !isEmailValid(loginData.Email) {
 		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid email")))
 		return
 	}
 
-	user, err := a.userStore.GetUserByEmail(loginData.Email)
+	id, err := a.userStore.UserIDByEmail(loginData.Email)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user["password"].(string)), []byte(loginData.Password))
+	confirmed, err := a.userStore.IsEmailConfirmed(id)
+	if err != nil {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
+
+	if !confirmed {
+		render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+
+	password, err := a.userStore.GetPassword(id)
+	if err != nil {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(password), []byte(loginData.Password))
 	if err != nil {
 		render.Render(w, r, ErrUnauthorized(err))
 		return
 	}
-	user["password"] = nil
 
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
@@ -236,9 +267,15 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := uuid.New().String()
-	session.Values["id"] = user["id"]
-	session.Values["token"] = uuid.New().String()
+	session.Values["id"] = id
+	session.Values["token"] = token
 	err = session.Save(r, w)
+	if err != nil {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
+
+	email, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -249,8 +286,12 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/app", http.StatusSeeOther)
 		return
 	case jsonContentType:
-		user["token"] = token
-		render.JSON(w, r, &user)
+		render.JSON(w, r, map[string]interface{}{
+			"id":       id,
+			"email":    email,
+			"metadata": metadata,
+			"token":    token,
+		})
 		render.Status(r, http.StatusOK)
 		return
 	}
@@ -307,24 +348,35 @@ func (a *API) isAuthenticated(next http.Handler) http.Handler {
 
 func (a *API) User(w http.ResponseWriter, r *http.Request) {
 	id := r.Context().Value(ctxUserIdKey).(string)
-	usr, err := a.userStore.GetUser(id)
+	email, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
 
-	render.JSON(w, r, &usr)
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		render.Render(w, r, ErrInternal(err))
+		return
+	}
+
+	render.JSON(w, r, map[string]interface{}{
+		"id":       id,
+		"email":    email,
+		"metadata": metadata,
+		"token":    session.Values["token"],
+	})
 	render.Status(r, http.StatusOK)
 }
 
 func (a *API) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
-	u, err := a.userStore.GetUserByConfirmationToken(token)
+	id, err := a.userStore.UserIDByConfirmationToken(token)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	id := u["id"].(string)
+
 	err = a.userStore.MarkConfirmed(id, true)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
@@ -342,12 +394,12 @@ type ChangeEmailData struct {
 	Email string `json:"email"`
 }
 
-func (c *ChangeEmailData) Bind(r *http.Request) error {
+func (c *ChangeEmailData) Bind(_ *http.Request) error {
 	return nil
 }
 
 // Fieldmap for the ChangeEmailData
-func (c *ChangeEmailData) FieldMap(req *http.Request) binding.FieldMap {
+func (c *ChangeEmailData) FieldMap(_ *http.Request) binding.FieldMap {
 	return binding.FieldMap{
 		&c.Email: binding.Field{
 			Form:     "email",
@@ -378,7 +430,7 @@ func (a *API) ChangeEmail(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if isEmailValid(changeEmailData.Email) {
+	if !isEmailValid(changeEmailData.Email) {
 		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid email")))
 		return
 	}
@@ -408,16 +460,20 @@ func (a *API) ChangeEmail(w http.ResponseWriter, r *http.Request) {
 func (a *API) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(ctxUserIdKey).(string)
 	token := chi.URLParam(r, "token")
-	u, err := a.userStore.GetUserByEmailChangeToken(token)
+	id, err := a.userStore.UserIDByEmailChangeToken(token)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
-	id := u["id"].(string)
-	newEmail := u["email_change"].(string)
 	if userID != id {
 		render.Render(w, r, ErrUnauthorized(err))
+		return
+	}
+
+	newEmail, err := a.userStore.GetEmailChange(id)
+	if err != nil {
+		render.Render(w, r, ErrInternal(err))
 		return
 	}
 
@@ -440,12 +496,12 @@ type RecoveryData struct {
 	Password string `json:"password"`
 }
 
-func (re *RecoveryData) Bind(r *http.Request) error {
+func (re *RecoveryData) Bind(_ *http.Request) error {
 	return nil
 }
 
 // Fieldmap for the RecoveryData
-func (re *RecoveryData) FieldMap(req *http.Request) binding.FieldMap {
+func (re *RecoveryData) FieldMap(_ *http.Request) binding.FieldMap {
 	return binding.FieldMap{
 		&re.Email: binding.Field{
 			Form:     "email",
@@ -479,17 +535,17 @@ func (a *API) Recovery(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if isEmailValid(recoveryData.Email) {
+	if !isEmailValid(recoveryData.Email) {
 		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid email")))
 		return
 	}
 
-	u, err := a.userStore.GetUserByEmail(recoveryData.Email)
+	id, err := a.userStore.UserIDByEmail(recoveryData.Email)
 	if err != nil {
 		render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
-	id := u["id"].(string)
+
 	recoveryToken := uuid.New().String()
 	err = a.userStore.SaveRecoveryToken(id, recoveryToken)
 	if err != nil {
@@ -539,13 +595,11 @@ func (a *API) ConfirmRecovery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := a.userStore.GetUserByRecoveryToken(token)
+	id, err := a.userStore.UserIDByRecoveryToken(token)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
-
-	id := u["id"].(string)
 
 	hashedPassword, err := hashPassword(recoveryData.Password)
 	if err != nil {
