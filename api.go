@@ -472,7 +472,7 @@ func (a *API) Recovery(email string) error {
 		return err
 	}
 
-	err = a.sendMail(fmt.Sprintf("http://localhost:4000/confirm/%s", recoveryToken))
+	err = a.sendMail(fmt.Sprintf("http://localhost:4000/reset/%s", recoveryToken))
 	if err != nil {
 		return err
 	}
@@ -485,78 +485,28 @@ func (a *API) Recovery(email string) error {
 	return nil
 }
 
-type RecoveryData struct {
-	Password string `json:"password"`
-}
+func (a *API) ConfirmRecovery(token, password string) error {
 
-func (re *RecoveryData) Bind(_ *http.Request) error {
-	return nil
-}
-
-// Fieldmap for the RecoveryData
-func (re *RecoveryData) FieldMap(_ *http.Request) binding.FieldMap {
-	return binding.FieldMap{
-		&re.Password: binding.Field{
-			Form:     "password",
-			Required: true,
-		},
-	}
-}
-
-func (a *API) ConfirmRecovery(w http.ResponseWriter, r *http.Request) {
-	token := chi.URLParam(r, "token")
-	recoveryData := new(RecoveryData)
-	contentType := r.Header.Get("Content-type")
-	if contentType == "" {
-		contentType = jsonContentType
-	}
-
-	switch contentType {
-	case formContentType:
-		if errs := binding.Bind(r, recoveryData); errs != nil {
-			render.Render(w, r, ErrInvalidRequest(errs))
-			return
-		}
-
-	case jsonContentType:
-		if err := render.Bind(r, recoveryData); err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-	}
-
-	if len(recoveryData.Password) < 8 {
-		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("password length < 8")))
-		return
+	if len(password) < 8 {
+		return fmt.Errorf("password length < 8")
 	}
 
 	id, err := a.userStore.UserIDByRecoveryToken(token)
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
+		return err
 	}
 
-	hashedPassword, err := hashPassword(recoveryData.Password)
+	hashedPassword, err := hashPassword(password)
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
+		return err
 	}
 
 	err = a.userStore.UpdatePassword(id, hashedPassword)
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
+		return err
 	}
 
-	switch contentType {
-	case formContentType:
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	case jsonContentType:
-		render.Status(r, http.StatusOK)
-		return
-	}
-
+	return nil
 }
 
 func (a *API) UpdateMetaData(id string, metaData map[string]interface{}) error {
