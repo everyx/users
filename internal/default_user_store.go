@@ -271,7 +271,7 @@ func (d *DefaultUserStore) DeleteEmailChangeToken(id string) error {
 		return err
 	}
 
-	_, err = u.ClearEmailChangeToken().ClearEmailChangeSentAt().Save(d.Ctx)
+	_, err = u.ClearEmailChange().ClearEmailChangeToken().ClearEmailChangeSentAt().Save(d.Ctx)
 	if err != nil {
 		return err
 	}

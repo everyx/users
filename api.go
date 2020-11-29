@@ -355,33 +355,28 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 	})
 }
 
-func (a *API) LoggedInUser(r *http.Request) (map[string]interface{}, error) {
+func (a *API) LoggedInUser(r *http.Request) (string, string, map[string]interface{}, error) {
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
-		return nil, err
+		return "", "", nil, err
 	}
 
 	id, ok := session.Values["id"]
 	if !ok {
-		return nil, fmt.Errorf("user not logged in")
+		return "", "", nil, fmt.Errorf("user not logged in")
 	}
 
 	userID, ok := id.(string)
 	if !ok {
-		return nil, fmt.Errorf("user not logged in")
+		return "", "", nil, fmt.Errorf("user not logged in")
 	}
 
 	email, metadata, err := a.userStore.UserData(userID)
 	if err != nil {
-		return nil, fmt.Errorf("user not logged in")
+		return "", "", nil, fmt.Errorf("user not logged in")
 	}
 
-	return map[string]interface{}{
-		"id":       userID,
-		"email":    email,
-		"metadata": metadata,
-		"token":    session.Values["token"],
-	}, nil
+	return userID, email, metadata, nil
 }
 
 func (a *API) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
@@ -413,12 +408,12 @@ func (a *API) ChangeEmail(id, newEmail string) error {
 	}
 
 	emailChangeToken := uuid.New().String()
-	err := a.userStore.SaveEmailChangeToken(id, emailChangeToken, newEmail)
+	err := a.userStore.SaveEmailChangeToken(id, newEmail, emailChangeToken)
 	if err != nil {
 		return err
 	}
 
-	err = a.sendMail(fmt.Sprintf("http://localhost:4000/confirm/%s", emailChangeToken))
+	err = a.sendMail(fmt.Sprintf("http://localhost:4000/change/%s", emailChangeToken))
 	if err != nil {
 		return err
 	}
@@ -432,16 +427,10 @@ func (a *API) ChangeEmail(id, newEmail string) error {
 }
 
 func (a *API) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(ctxUserIdKey).(string)
 	token := chi.URLParam(r, "token")
 	id, err := a.userStore.UserIDByEmailChangeToken(token)
 	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
-		return
-	}
-
-	if userID != id {
-		render.Render(w, r, ErrUnauthorized(err))
+		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid or expired token: %w", err)))
 		return
 	}
 
@@ -451,7 +440,7 @@ func (a *API) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.userStore.UpdateEmail(userID, newEmail)
+	err = a.userStore.UpdateEmail(id, newEmail)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
@@ -462,6 +451,8 @@ func (a *API) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
+
+	http.Redirect(w, r, "/account?email_changed=true", http.StatusSeeOther)
 }
 
 func (a *API) Recovery(email string) error {
