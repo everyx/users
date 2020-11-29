@@ -2,9 +2,7 @@ package users
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -24,12 +22,12 @@ const (
 	ctxUserIdKey    = "key_user_id"
 )
 
-func NewDefaultAPI(ctx context.Context, driver, dataSource string) (*API, error) {
+func NewDefaultAPI(ctx context.Context, driver, dataSource, secret string) (*API, error) {
 	userStore, err := NewDefaultUserStore(ctx, driver, dataSource)
 	if err != nil {
 		return nil, err
 	}
-	sessionStore, err := NewDefaultSessionStore(ctx, driver, dataSource)
+	sessionStore, err := NewDefaultSessionStore(ctx, driver, dataSource, []byte(secret))
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +190,7 @@ func (a *API) Signup(w http.ResponseWriter, r *http.Request) {
 
 	switch contentType {
 	case formContentType:
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login?confirmation_sent=true", http.StatusSeeOther)
 		return
 	case jsonContentType:
 		render.Status(r, http.StatusOK)
@@ -237,6 +235,8 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("id ", id)
+
 	confirmed, err := a.userStore.IsEmailConfirmed(id)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
@@ -244,7 +244,17 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !confirmed {
-		render.Render(w, r, ErrInvalidRequest(err))
+		switch contentType {
+		case formContentType:
+			http.Redirect(w, r, "/login?not_confirmed=true", http.StatusSeeOther)
+			return
+		case jsonContentType:
+			render.JSON(w, r, map[string]interface{}{
+				"confirmed": false,
+			})
+			render.Status(r, http.StatusOK)
+			return
+		}
 		return
 	}
 
@@ -271,7 +281,7 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request) {
 	session.Values["token"] = token
 	err = session.Save(r, w)
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
+		render.Render(w, r, ErrInternal(fmt.Errorf("session.Save %w", err)))
 		return
 	}
 
@@ -314,7 +324,7 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (a *API) isAuthenticated(next http.Handler) http.Handler {
+func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := a.sessionStore.Get(r, "auth-session")
 		if err != nil {
@@ -341,32 +351,37 @@ func (a *API) isAuthenticated(next http.Handler) http.Handler {
 			ctx := r.Context()
 			ctx = context.WithValue(ctx, ctxUserIdKey, id)
 			next.ServeHTTP(w, r.WithContext(ctx))
-			next.ServeHTTP(w, r)
 		}
 	})
 }
 
-func (a *API) User(w http.ResponseWriter, r *http.Request) {
-	id := r.Context().Value(ctxUserIdKey).(string)
-	email, metadata, err := a.userStore.UserData(id)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
+func (a *API) LoggedInUser(r *http.Request) (map[string]interface{}, error) {
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
+		return nil, err
 	}
 
-	render.JSON(w, r, map[string]interface{}{
-		"id":       id,
+	id, ok := session.Values["id"]
+	if !ok {
+		return nil, fmt.Errorf("user not logged in")
+	}
+
+	userID, ok := id.(string)
+	if !ok {
+		return nil, fmt.Errorf("user not logged in")
+	}
+
+	email, metadata, err := a.userStore.UserData(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not logged in")
+	}
+
+	return map[string]interface{}{
+		"id":       userID,
 		"email":    email,
 		"metadata": metadata,
 		"token":    session.Values["token"],
-	})
-	render.Status(r, http.StatusOK)
+	}, nil
 }
 
 func (a *API) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
@@ -388,73 +403,32 @@ func (a *API) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.Redirect(w, r, "/login?confirmed=true", http.StatusSeeOther)
+
 }
 
-type ChangeEmailData struct {
-	Email string `json:"email"`
-}
-
-func (c *ChangeEmailData) Bind(_ *http.Request) error {
-	return nil
-}
-
-// Fieldmap for the ChangeEmailData
-func (c *ChangeEmailData) FieldMap(_ *http.Request) binding.FieldMap {
-	return binding.FieldMap{
-		&c.Email: binding.Field{
-			Form:     "email",
-			Required: true,
-		},
-	}
-}
-
-func (a *API) ChangeEmail(w http.ResponseWriter, r *http.Request) {
-	id := r.Context().Value(ctxUserIdKey).(string)
-	changeEmailData := new(ChangeEmailData)
-	contentType := r.Header.Get("Content-type")
-	if contentType == "" {
-		contentType = jsonContentType
-	}
-
-	switch contentType {
-	case formContentType:
-		if errs := binding.Bind(r, changeEmailData); errs != nil {
-			render.Render(w, r, ErrInvalidRequest(errs))
-			return
-		}
-
-	case jsonContentType:
-		if err := render.Bind(r, changeEmailData); err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-	}
-
-	if !isEmailValid(changeEmailData.Email) {
-		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid email")))
-		return
+func (a *API) ChangeEmail(id, newEmail string) error {
+	if !isEmailValid(newEmail) {
+		return fmt.Errorf("email is invalid")
 	}
 
 	emailChangeToken := uuid.New().String()
-	err := a.userStore.SaveEmailChangeToken(id, emailChangeToken, changeEmailData.Email)
+	err := a.userStore.SaveEmailChangeToken(id, emailChangeToken, newEmail)
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
+		return err
 	}
 
 	err = a.sendMail(fmt.Sprintf("http://localhost:4000/confirm/%s", emailChangeToken))
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
+		return err
 	}
 
 	err = a.userStore.SaveEmailChangeTokenSentAt(id, time.Now())
 	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
+		return err
 	}
 
-	render.Status(r, http.StatusOK)
+	return nil
 }
 
 func (a *API) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
@@ -488,11 +462,39 @@ func (a *API) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
+}
 
+func (a *API) Recovery(email string) error {
+
+	if !isEmailValid(email) {
+		return fmt.Errorf("invalid emaild")
+	}
+
+	id, err := a.userStore.UserIDByEmail(email)
+	if err != nil {
+		return err
+	}
+
+	recoveryToken := uuid.New().String()
+	err = a.userStore.SaveRecoveryToken(id, recoveryToken)
+	if err != nil {
+		return err
+	}
+
+	err = a.sendMail(fmt.Sprintf("http://localhost:4000/confirm/%s", recoveryToken))
+	if err != nil {
+		return err
+	}
+
+	err = a.userStore.SaveRecoveryTokenSentAt(id, time.Now())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type RecoveryData struct {
-	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -503,69 +505,11 @@ func (re *RecoveryData) Bind(_ *http.Request) error {
 // Fieldmap for the RecoveryData
 func (re *RecoveryData) FieldMap(_ *http.Request) binding.FieldMap {
 	return binding.FieldMap{
-		&re.Email: binding.Field{
-			Form:     "email",
-			Required: true,
-		},
 		&re.Password: binding.Field{
 			Form:     "password",
 			Required: true,
 		},
 	}
-}
-
-func (a *API) Recovery(w http.ResponseWriter, r *http.Request) {
-	recoveryData := new(RecoveryData)
-	contentType := r.Header.Get("Content-type")
-	if contentType == "" {
-		contentType = jsonContentType
-	}
-
-	switch contentType {
-	case formContentType:
-		if errs := binding.Bind(r, recoveryData); errs != nil {
-			render.Render(w, r, ErrInvalidRequest(errs))
-			return
-		}
-
-	case jsonContentType:
-		if err := render.Bind(r, recoveryData); err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-	}
-
-	if !isEmailValid(recoveryData.Email) {
-		render.Render(w, r, ErrInvalidRequest(fmt.Errorf("invalid email")))
-		return
-	}
-
-	id, err := a.userStore.UserIDByEmail(recoveryData.Email)
-	if err != nil {
-		render.Render(w, r, ErrInvalidRequest(err))
-		return
-	}
-
-	recoveryToken := uuid.New().String()
-	err = a.userStore.SaveRecoveryToken(id, recoveryToken)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	err = a.sendMail(fmt.Sprintf("http://localhost:4000/confirm/%s", recoveryToken))
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	err = a.userStore.SaveRecoveryTokenSentAt(id, time.Now())
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	render.Status(r, http.StatusOK)
 }
 
 func (a *API) ConfirmRecovery(w http.ResponseWriter, r *http.Request) {
@@ -624,46 +568,12 @@ func (a *API) ConfirmRecovery(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (a *API) UpdateMetaData(w http.ResponseWriter, r *http.Request) {
-	id := r.Context().Value(ctxUserIdKey).(string)
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-	var metaData map[string]interface{}
-	err = json.Unmarshal(data, &metaData)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	err = a.userStore.UpsertMetaData(id, metaData)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
+func (a *API) UpdateMetaData(id string, metaData map[string]interface{}) error {
+	return a.userStore.UpsertMetaData(id, metaData)
 }
 
-func (a *API) DeleteMetaData(w http.ResponseWriter, r *http.Request) {
-	id := r.Context().Value(ctxUserIdKey).(string)
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-	var keys []string
-	err = json.Unmarshal(data, &keys)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
-
-	err = a.userStore.DeleteKeysMetaData(id, keys)
-	if err != nil {
-		render.Render(w, r, ErrInternal(err))
-		return
-	}
+func (a *API) DeleteMetaDataKeys(id string, keys []string) error {
+	return a.userStore.DeleteKeysMetaData(id, keys)
 }
 
 func (a *API) sendMail(data string) error {

@@ -35,7 +35,7 @@ type SessionMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *uuid.UUID
+	id            *string
 	data          *string
 	created_at    *time.Time
 	updated_at    *time.Time
@@ -66,7 +66,7 @@ func newSessionMutation(c config, op Op, opts ...sessionOption) *SessionMutation
 }
 
 // withSessionID sets the id field of the mutation.
-func withSessionID(id uuid.UUID) sessionOption {
+func withSessionID(id string) sessionOption {
 	return func(m *SessionMutation) {
 		var (
 			err   error
@@ -118,13 +118,13 @@ func (m SessionMutation) Tx() (*Tx, error) {
 
 // SetID sets the value of the id field. Note that, this
 // operation is accepted only on Session creation.
-func (m *SessionMutation) SetID(id uuid.UUID) {
+func (m *SessionMutation) SetID(id string) {
 	m.id = &id
 }
 
 // ID returns the id value in the mutation. Note that, the id
 // is available only if it was provided to the builder.
-func (m *SessionMutation) ID() (id uuid.UUID, exists bool) {
+func (m *SessionMutation) ID() (id string, exists bool) {
 	if m.id == nil {
 		return
 	}

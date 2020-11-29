@@ -43,7 +43,7 @@ const (
 	FieldLastSigninAt = "last_signin_at"
 
 	// Table holds the table name of the user in the database.
-	Table = "Usersx"
+	Table = "usersx"
 )
 
 // Columns holds all SQL columns for user fields.

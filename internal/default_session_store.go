@@ -9,7 +9,6 @@ import (
 
 	"github.com/adnaan/users/internal/models"
 	sessionModel "github.com/adnaan/users/internal/models/session"
-	"github.com/google/uuid"
 	gContext "github.com/gorilla/context"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
@@ -54,12 +53,7 @@ func (ds *DefaultSessionStore) New(r *http.Request, name string) (*sessions.Sess
 		return session, nil
 	}
 
-	sid, err := uuid.Parse(session.ID)
-	if err != nil {
-		return session, nil
-	}
-
-	s, err := ds.Client.Session.Query().Where(sessionModel.IDEQ(sid), sessionModel.ExpiresAtGT(time.Now())).Only(ds.Ctx)
+	s, err := ds.Client.Session.Query().Where(sessionModel.IDEQ(session.ID), sessionModel.ExpiresAtGT(time.Now())).Only(ds.Ctx)
 	if err != nil {
 		return session, nil
 	}
@@ -100,12 +94,7 @@ func (ds *DefaultSessionStore) Save(r *http.Request, w http.ResponseWriter, sess
 			base32.StdEncoding.EncodeToString(
 				securecookie.GenerateRandomKey(sessionIDLen)), "=")
 
-		sid, err := uuid.Parse(session.ID)
-		if err != nil {
-			return err
-		}
-
-		newSess, err := ds.Client.Session.Create().SetID(sid).SetData(data).SetUpdatedAt(now).SetExpiresAt(expire).Save(ds.Ctx)
+		newSess, err := ds.Client.Session.Create().SetID(session.ID).SetData(data).SetUpdatedAt(now).SetExpiresAt(expire).Save(ds.Ctx)
 		if err != nil {
 			return err
 		}

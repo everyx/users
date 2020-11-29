@@ -9,14 +9,13 @@ import (
 
 	"github.com/adnaan/users/internal/models/session"
 	"github.com/facebook/ent/dialect/sql"
-	"github.com/google/uuid"
 )
 
 // Session is the model entity for the Session schema.
 type Session struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID uuid.UUID `json:"id,omitempty"`
+	ID string `json:"id,omitempty"`
 	// Data holds the value of the "data" field.
 	Data string `json:"data,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -30,7 +29,7 @@ type Session struct {
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Session) scanValues() []interface{} {
 	return []interface{}{
-		&uuid.UUID{},      // id
+		&sql.NullString{}, // id
 		&sql.NullString{}, // data
 		&sql.NullTime{},   // created_at
 		&sql.NullTime{},   // updated_at
@@ -44,10 +43,10 @@ func (s *Session) assignValues(values ...interface{}) error {
 	if m, n := len(values), len(session.Columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
-	if value, ok := values[0].(*uuid.UUID); !ok {
+	if value, ok := values[0].(*sql.NullString); !ok {
 		return fmt.Errorf("unexpected type %T for field id", values[0])
-	} else if value != nil {
-		s.ID = *value
+	} else if value.Valid {
+		s.ID = value.String
 	}
 	values = values[1:]
 	if value, ok := values[0].(*sql.NullString); !ok {

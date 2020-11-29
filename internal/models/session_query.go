@@ -13,7 +13,6 @@ import (
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
-	"github.com/google/uuid"
 )
 
 // SessionQuery is the builder for querying Session entities.
@@ -75,8 +74,8 @@ func (sq *SessionQuery) FirstX(ctx context.Context) *Session {
 }
 
 // FirstID returns the first Session id in the query. Returns *NotFoundError when no id was found.
-func (sq *SessionQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
-	var ids []uuid.UUID
+func (sq *SessionQuery) FirstID(ctx context.Context) (id string, err error) {
+	var ids []string
 	if ids, err = sq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -88,7 +87,7 @@ func (sq *SessionQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (sq *SessionQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (sq *SessionQuery) FirstIDX(ctx context.Context) string {
 	id, err := sq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -122,8 +121,8 @@ func (sq *SessionQuery) OnlyX(ctx context.Context) *Session {
 }
 
 // OnlyID returns the only Session id in the query, returns an error if not exactly one id was returned.
-func (sq *SessionQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
-	var ids []uuid.UUID
+func (sq *SessionQuery) OnlyID(ctx context.Context) (id string, err error) {
+	var ids []string
 	if ids, err = sq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -139,7 +138,7 @@ func (sq *SessionQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (sq *SessionQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (sq *SessionQuery) OnlyIDX(ctx context.Context) string {
 	id, err := sq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -165,8 +164,8 @@ func (sq *SessionQuery) AllX(ctx context.Context) []*Session {
 }
 
 // IDs executes the query and returns a list of Session ids.
-func (sq *SessionQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
+func (sq *SessionQuery) IDs(ctx context.Context) ([]string, error) {
+	var ids []string
 	if err := sq.Select(session.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -174,7 +173,7 @@ func (sq *SessionQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (sq *SessionQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (sq *SessionQuery) IDsX(ctx context.Context) []string {
 	ids, err := sq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -343,7 +342,7 @@ func (sq *SessionQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   session.Table,
 			Columns: session.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
+				Type:   field.TypeString,
 				Column: session.FieldID,
 			},
 		},

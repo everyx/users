@@ -11,7 +11,6 @@ import (
 	"github.com/adnaan/users/internal/models/session"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
-	"github.com/google/uuid"
 )
 
 // SessionCreate is the builder for creating a Session entity.
@@ -70,8 +69,8 @@ func (sc *SessionCreate) SetNillableExpiresAt(t *time.Time) *SessionCreate {
 }
 
 // SetID sets the id field.
-func (sc *SessionCreate) SetID(u uuid.UUID) *SessionCreate {
-	sc.mutation.SetID(u)
+func (sc *SessionCreate) SetID(s string) *SessionCreate {
+	sc.mutation.SetID(s)
 	return sc
 }
 
@@ -168,7 +167,7 @@ func (sc *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: session.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
+				Type:   field.TypeString,
 				Column: session.FieldID,
 			},
 		}

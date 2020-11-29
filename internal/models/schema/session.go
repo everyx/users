@@ -8,7 +8,6 @@ import (
 
 	"github.com/facebook/ent"
 	"github.com/facebook/ent/schema/field"
-	"github.com/google/uuid"
 )
 
 // Session holds the schema definition for the Session entity.
@@ -25,7 +24,7 @@ func (Session) Annotations() []schema.Annotation {
 // Fields of the Session.
 func (Session) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}),
+		field.String("id"),
 		field.Text("data"),
 		field.Time("created_at").Immutable().Default(time.Now),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),

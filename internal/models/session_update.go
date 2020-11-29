@@ -130,7 +130,7 @@ func (su *SessionUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   session.Table,
 			Columns: session.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
+				Type:   field.TypeString,
 				Column: session.FieldID,
 			},
 		},
@@ -290,7 +290,7 @@ func (suo *SessionUpdateOne) sqlSave(ctx context.Context) (_node *Session, err e
 			Table:   session.Table,
 			Columns: session.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
+				Type:   field.TypeString,
 				Column: session.FieldID,
 			},
 		},
