@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 
 	"golang.org/x/crypto/bcrypt"
-
-	"github.com/go-chi/render"
 )
 
 const (
@@ -169,7 +167,7 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := a.sessionStore.Get(r, "auth-session")
 		if err != nil {
-			render.Render(w, r, ErrInternal(err))
+			http.Error(w, "Unauthorized", 401)
 			return
 		}
 
@@ -185,7 +183,7 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 				return
 
 			case jsonContentType:
-				render.Render(w, r, ErrUnauthorized(err))
+				http.Error(w, "Unauthorized", 401)
 				return
 			}
 		} else {
