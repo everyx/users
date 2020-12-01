@@ -10,7 +10,9 @@ import (
 	"github.com/adnaan/users/internal"
 
 	"github.com/adnaan/users/internal/models"
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const defaultMaxAge = 60 * 60 * 24 * 30 // 30 days

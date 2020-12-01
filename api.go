@@ -61,11 +61,11 @@ func hashPassword(password string) (string, error) {
 func (a *API) Signup(email, password string, metadata map[string]interface{}) error {
 
 	if len(password) < 8 {
-		return ErrInvalidPassword
+		return fmt.Errorf("%w", ErrInvalidPassword)
 	}
 
 	if !isEmailValid(email) {
-		return ErrInvalidEmail
+		return fmt.Errorf("%w", ErrInvalidEmail)
 	}
 
 	hashedPassword, err := hashPassword(password)
@@ -105,16 +105,16 @@ func (a *API) Signup(email, password string, metadata map[string]interface{}) er
 func (a *API) Login(w http.ResponseWriter, r *http.Request, email, password string) error {
 
 	if len(password) < 8 {
-		return ErrInvalidPassword
+		return fmt.Errorf("%w", ErrInvalidPassword)
 	}
 
 	if !isEmailValid(email) {
-		return ErrInvalidEmail
+		return fmt.Errorf("%w", ErrInvalidEmail)
 	}
 
 	id, err := a.userStore.UserIDByEmail(email)
 	if err != nil {
-		return ErrUserNotFound
+		return fmt.Errorf("%w", ErrUserNotFound)
 	}
 
 	confirmed, err := a.userStore.IsEmailConfirmed(id)
@@ -123,7 +123,7 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request, email, password stri
 	}
 
 	if !confirmed {
-		return ErrEmailNotConfirmed
+		return fmt.Errorf("%w", ErrEmailNotConfirmed)
 	}
 
 	existingPassword, err := a.userStore.GetPassword(id)
@@ -218,7 +218,7 @@ func (a *API) LoggedInUser(r *http.Request) (string, string, map[string]interfac
 
 	id, ok := session.Values["id"]
 	if !ok {
-		return "", "", nil, ErrUserNotLoggedIn
+		return "", "", nil, fmt.Errorf("%w", ErrUserNotLoggedIn)
 	}
 
 	userID, ok := id.(string)
@@ -254,7 +254,7 @@ func (a *API) ConfirmEmail(token string) error {
 
 func (a *API) ChangeEmail(id, newEmail string) error {
 	if !isEmailValid(newEmail) {
-		return ErrInvalidEmail
+		return fmt.Errorf("%w", ErrInvalidEmail)
 	}
 
 	emailChangeToken := uuid.New().String()
@@ -279,7 +279,7 @@ func (a *API) ChangeEmail(id, newEmail string) error {
 func (a *API) ConfirmEmailChange(token string) error {
 	id, err := a.userStore.UserIDByEmailChangeToken(token)
 	if err != nil {
-		return ErrUserNotFound
+		return fmt.Errorf("%w", ErrUserNotFound)
 	}
 
 	newEmail, err := a.userStore.GetEmailChange(id)
@@ -303,7 +303,7 @@ func (a *API) ConfirmEmailChange(token string) error {
 func (a *API) Recovery(email string) error {
 
 	if !isEmailValid(email) {
-		return ErrInvalidEmail
+		return fmt.Errorf("%w", ErrInvalidEmail)
 	}
 
 	id, err := a.userStore.UserIDByEmail(email)
@@ -333,7 +333,7 @@ func (a *API) Recovery(email string) error {
 func (a *API) ConfirmRecovery(token, password string) error {
 
 	if len(password) < 8 {
-		return ErrInvalidPassword
+		return fmt.Errorf("%w", ErrInvalidPassword)
 	}
 
 	id, err := a.userStore.UserIDByRecoveryToken(token)
