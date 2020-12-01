@@ -170,21 +170,32 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		contentType := r.Header.Get("Content-type")
+		if contentType == "" {
+			contentType = formContentType
+		}
+
+		redirectTo := fmt.Sprintf("/login?from=%s", r.URL.Path)
+
 		session, err := a.sessionStore.Get(r, "auth-session")
 		if err != nil {
-			http.Error(w, "Unauthorized", 401)
+			switch contentType {
+			case formContentType:
+				http.Redirect(w, r, redirectTo, http.StatusSeeOther)
+				return
+
+			case jsonContentType:
+				http.Error(w, "Unauthorized", 401)
+				return
+			}
 			return
 		}
 
 		id, ok := session.Values["id"]
 		if !ok {
-			contentType := r.Header.Get("Content-type")
-			if contentType == "" {
-				contentType = jsonContentType
-			}
 			switch contentType {
 			case formContentType:
-				http.Redirect(w, r, "/", http.StatusSeeOther)
+				http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 				return
 
 			case jsonContentType:
