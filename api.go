@@ -61,37 +61,42 @@ func hashPassword(password string) (string, error) {
 func (a *API) Signup(email, password string, metadata map[string]interface{}) error {
 
 	if len(password) < 8 {
-		return fmt.Errorf("password length < 8")
+		return ErrInvalidPassword
 	}
 
 	if !isEmailValid(email) {
-		return fmt.Errorf("invalid email")
+		return ErrInvalidEmail
 	}
 
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	_, err = a.userStore.UserIDByEmail(email)
+	if err == nil {
+		return fmt.Errorf("%w", ErrUserExists)
 	}
 
 	id, err := a.userStore.New(email, hashedPassword, metadata)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	confirmationToken := uuid.New().String()
 	err = a.userStore.SaveConfirmationToken(id, confirmationToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.sendMail(fmt.Sprintf("http://localhost:4000/confirm/%s", confirmationToken))
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrSendingEmail)
 	}
 
 	err = a.userStore.SaveConfirmationTokenSentAt(id, time.Now())
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	return nil
@@ -100,16 +105,16 @@ func (a *API) Signup(email, password string, metadata map[string]interface{}) er
 func (a *API) Login(w http.ResponseWriter, r *http.Request, email, password string) error {
 
 	if len(password) < 8 {
-		return fmt.Errorf("password length < 8")
+		return ErrInvalidPassword
 	}
 
 	if !isEmailValid(email) {
-		return fmt.Errorf("invalid email")
+		return ErrInvalidEmail
 	}
 
 	id, err := a.userStore.UserIDByEmail(email)
 	if err != nil {
-		return err
+		return ErrUserNotFound
 	}
 
 	confirmed, err := a.userStore.IsEmailConfirmed(id)
@@ -118,22 +123,22 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request, email, password stri
 	}
 
 	if !confirmed {
-		return fmt.Errorf("email not confirmed")
+		return ErrEmailNotConfirmed
 	}
 
 	existingPassword, err := a.userStore.GetPassword(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(existingPassword), []byte(password))
 	if err != nil {
-		return err
+		return fmt.Errorf("err: %v, %w", err, ErrWrongPassword)
 	}
 
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
-		return err
+		return fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
 	}
 
 	token := uuid.New().String()
@@ -141,7 +146,7 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request, email, password stri
 	session.Values["token"] = token
 	err = session.Save(r, w)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	return nil
@@ -197,22 +202,22 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 func (a *API) LoggedInUser(r *http.Request) (string, string, map[string]interface{}, error) {
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
-		return "", "", nil, err
+		return "", "", nil, fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
 	}
 
 	id, ok := session.Values["id"]
 	if !ok {
-		return "", "", nil, fmt.Errorf("user not logged in")
+		return "", "", nil, ErrUserNotLoggedIn
 	}
 
 	userID, ok := id.(string)
 	if !ok {
-		return "", "", nil, fmt.Errorf("user not logged in")
+		return "", "", nil, fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
 	}
 
 	email, metadata, err := a.userStore.UserData(userID)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("user not logged in")
+		return "", "", nil, fmt.Errorf("%v, %w", err, ErrUserNotLoggedIn)
 	}
 
 	return userID, email, metadata, nil
@@ -221,16 +226,16 @@ func (a *API) LoggedInUser(r *http.Request) (string, string, map[string]interfac
 func (a *API) ConfirmEmail(token string) error {
 	id, err := a.userStore.UserIDByConfirmationToken(token)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v, %w", err, ErrUserNotFound)
 	}
 
 	err = a.userStore.MarkConfirmed(id, true)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 	err = a.userStore.DeleteConfirmToken(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	return nil
@@ -238,23 +243,23 @@ func (a *API) ConfirmEmail(token string) error {
 
 func (a *API) ChangeEmail(id, newEmail string) error {
 	if !isEmailValid(newEmail) {
-		return fmt.Errorf("email is invalid")
+		return ErrInvalidEmail
 	}
 
 	emailChangeToken := uuid.New().String()
 	err := a.userStore.SaveEmailChangeToken(id, newEmail, emailChangeToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.sendMail(fmt.Sprintf("http://localhost:4000/change/%s", emailChangeToken))
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.userStore.SaveEmailChangeTokenSentAt(id, time.Now())
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	return nil
@@ -263,22 +268,22 @@ func (a *API) ChangeEmail(id, newEmail string) error {
 func (a *API) ConfirmEmailChange(token string) error {
 	id, err := a.userStore.UserIDByEmailChangeToken(token)
 	if err != nil {
-		return fmt.Errorf("invalid or expired token: %w", err)
+		return ErrUserNotFound
 	}
 
 	newEmail, err := a.userStore.GetEmailChange(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.userStore.UpdateEmail(id, newEmail)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.userStore.DeleteEmailChangeToken(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	return nil
@@ -287,28 +292,28 @@ func (a *API) ConfirmEmailChange(token string) error {
 func (a *API) Recovery(email string) error {
 
 	if !isEmailValid(email) {
-		return fmt.Errorf("invalid emaild")
+		return ErrInvalidEmail
 	}
 
 	id, err := a.userStore.UserIDByEmail(email)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrUserNotFound)
 	}
 
 	recoveryToken := uuid.New().String()
 	err = a.userStore.SaveRecoveryToken(id, recoveryToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.sendMail(fmt.Sprintf("http://localhost:4000/reset/%s", recoveryToken))
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.userStore.SaveRecoveryTokenSentAt(id, time.Now())
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	return nil
@@ -317,22 +322,22 @@ func (a *API) Recovery(email string) error {
 func (a *API) ConfirmRecovery(token, password string) error {
 
 	if len(password) < 8 {
-		return fmt.Errorf("password length < 8")
+		return ErrInvalidPassword
 	}
 
 	id, err := a.userStore.UserIDByRecoveryToken(token)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrUserNotFound)
 	}
 
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	err = a.userStore.UpdatePassword(id, hashedPassword)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
 	return nil

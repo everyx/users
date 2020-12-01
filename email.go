@@ -1,7 +1,6 @@
 package users
 
 import (
-	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -24,6 +23,5 @@ func isEmailValid(e string) bool {
 	if err != nil || len(mx) == 0 {
 		return false
 	}
-	fmt.Println("email ", e)
 	return true
 }
