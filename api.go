@@ -18,12 +18,29 @@ const (
 	ctxUserIdKey    = "key_user_id"
 )
 
-func NewDefaultAPI(ctx context.Context, driver, dataSource, secret string) (*API, error) {
-	userStore, err := NewDefaultUserStore(ctx, driver, dataSource)
+type Config struct {
+	Driver          string
+	Datasource      string
+	SessionSecret   string
+	SMTPUser        string
+	SMTPPass        string
+	SMTPHost        string
+	SMTPPort        int
+	SMTPAdminEmail  string
+	SMTPUnencrypted bool
+}
+
+func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
+	userStore, err := NewDefaultUserStore(ctx, cfg.Driver, cfg.Datasource)
 	if err != nil {
 		return nil, err
 	}
-	sessionStore, err := NewDefaultSessionStore(ctx, driver, dataSource, []byte(secret))
+	sessionStore, err := NewDefaultSessionStore(ctx, cfg.Driver, cfg.Datasource, []byte(cfg.SessionSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	pool, err := newEmailPool(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -32,14 +49,16 @@ func NewDefaultAPI(ctx context.Context, driver, dataSource, secret string) (*API
 		ctx:          ctx,
 		userStore:    userStore,
 		sessionStore: sessionStore,
+		sendMailFunc: DefaultSendEmailFunc(cfg, pool),
 	}, nil
 }
 
-func NewAPI(ctx context.Context, userStore UserStore, sessionStore SessionsStore) *API {
+func NewAPI(ctx context.Context, userStore UserStore, sessionStore SessionsStore, sendmailFunc SendmailFunc) *API {
 	return &API{
 		ctx:          ctx,
 		userStore:    userStore,
 		sessionStore: sessionStore,
+		sendMailFunc: sendmailFunc,
 	}
 }
 
@@ -47,6 +66,7 @@ type API struct {
 	ctx          context.Context
 	userStore    UserStore
 	sessionStore SessionsStore
+	sendMailFunc SendmailFunc
 }
 
 // hashPassword generates a hashed password from a plaintext string
