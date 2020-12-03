@@ -3,7 +3,6 @@ package users
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -19,15 +18,10 @@ const (
 )
 
 type Config struct {
-	Driver          string
-	Datasource      string
-	SessionSecret   string
-	SMTPUser        string
-	SMTPPass        string
-	SMTPHost        string
-	SMTPPort        int
-	SMTPAdminEmail  string
-	SMTPUnencrypted bool
+	Driver        string
+	Datasource    string
+	SessionSecret string
+	SendMail      SendMailFunc
 }
 
 func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
@@ -40,25 +34,19 @@ func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
 		return nil, err
 	}
 
-	pool, err := newEmailPool(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	return &API{
 		ctx:          ctx,
 		userStore:    userStore,
 		sessionStore: sessionStore,
-		sendMailFunc: DefaultSendEmailFunc(cfg, pool),
 	}, nil
 }
 
-func NewAPI(ctx context.Context, userStore UserStore, sessionStore SessionsStore, sendmailFunc SendmailFunc) *API {
+func NewAPI(ctx context.Context, userStore UserStore, sessionStore SessionsStore, sendMail SendMailFunc) *API {
 	return &API{
 		ctx:          ctx,
 		userStore:    userStore,
 		sessionStore: sessionStore,
-		sendMailFunc: sendmailFunc,
+		sendMail:     sendMail,
 	}
 }
 
@@ -66,7 +54,7 @@ type API struct {
 	ctx          context.Context
 	userStore    UserStore
 	sessionStore SessionsStore
-	sendMailFunc SendmailFunc
+	sendMail     SendMailFunc
 }
 
 // hashPassword generates a hashed password from a plaintext string
@@ -109,7 +97,7 @@ func (a *API) Signup(email, password string, metadata map[string]interface{}) er
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	err = a.sendMail(fmt.Sprintf("http://localhost:4000/confirm/%s", confirmationToken))
+	err = a.sendMail(Confirmation, confirmationToken, email, metadata)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrSendingEmail)
 	}
@@ -277,13 +265,18 @@ func (a *API) ChangeEmail(id, newEmail string) error {
 		return fmt.Errorf("%w", ErrInvalidEmail)
 	}
 
+	email, metadata, err := a.userStore.UserData(id)
+	if err != nil {
+		return fmt.Errorf("%w", ErrInternal)
+	}
+
 	emailChangeToken := uuid.New().String()
-	err := a.userStore.SaveEmailChangeToken(id, newEmail, emailChangeToken)
+	err = a.userStore.SaveEmailChangeToken(id, newEmail, emailChangeToken)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	err = a.sendMail(fmt.Sprintf("http://localhost:4000/change/%s", emailChangeToken))
+	err = a.sendMail(ChangeEmail, emailChangeToken, email, metadata)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -337,7 +330,12 @@ func (a *API) Recovery(email string) error {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	err = a.sendMail(fmt.Sprintf("http://localhost:4000/reset/%s", recoveryToken))
+	_, metadata, err := a.userStore.UserData(id)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	err = a.sendMail(Recovery, recoveryToken, email, metadata)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -380,9 +378,4 @@ func (a *API) UpdateMetaData(id string, metaData map[string]interface{}) error {
 
 func (a *API) DeleteMetaDataKeys(id string, keys []string) error {
 	return a.userStore.DeleteKeysMetaData(id, keys)
-}
-
-func (a *API) sendMail(data string) error {
-	log.Println(data)
-	return nil
 }
