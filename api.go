@@ -83,7 +83,7 @@ func (a *API) Signup(email, password string, metadata map[string]interface{}) er
 	}
 
 	_, err = a.userStore.UserIDByEmail(email)
-	if err != nil {
+	if err == nil {
 		return fmt.Errorf("%w", ErrUserExists)
 	}
 
