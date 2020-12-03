@@ -38,6 +38,7 @@ func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
 		ctx:          ctx,
 		userStore:    userStore,
 		sessionStore: sessionStore,
+		sendMail:     cfg.SendMail,
 	}, nil
 }
 
@@ -82,7 +83,7 @@ func (a *API) Signup(email, password string, metadata map[string]interface{}) er
 	}
 
 	_, err = a.userStore.UserIDByEmail(email)
-	if err == nil {
+	if err != nil {
 		return fmt.Errorf("%w", ErrUserExists)
 	}
 
