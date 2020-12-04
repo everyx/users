@@ -89,6 +89,15 @@ func (d *DefaultUserStore) UserIDByEmailChangeToken(token string) (string, error
 	return usr.ID.String(), nil
 }
 
+func (d *DefaultUserStore) UserIDByOTP(otp string) (string, error) {
+	usr, err := d.Client.User.Query().Where(user.Otp(otp)).Only(d.Ctx)
+	if err != nil {
+		return "", err
+	}
+
+	return usr.ID.String(), nil
+}
+
 func (d *DefaultUserStore) GetPassword(id string) (string, error) {
 	usr, err := d.getUser(id)
 	if err != nil {
@@ -195,6 +204,45 @@ func (d *DefaultUserStore) DeleteConfirmToken(id string) error {
 		return err
 	}
 	_, err = u.ClearConfirmationToken().ClearConfirmationSentAt().Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DefaultUserStore) SaveOTP(id, otp string) error {
+	u, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = u.SetOtp(otp).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DefaultUserStore) SaveOTPSentAt(id string, otpSentAt time.Time) error {
+	u, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = u.SetOtpSentAt(otpSentAt).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DefaultUserStore) DeleteOTP(id string) error {
+	u, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = u.ClearOtp().ClearOtpSentAt().Save(d.Ctx)
 	if err != nil {
 		return err
 	}

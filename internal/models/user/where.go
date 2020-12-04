@@ -142,6 +142,20 @@ func RecoveryToken(v string) predicate.User {
 	})
 }
 
+// OtpSentAt applies equality check predicate on the "otp_sent_at" field. It's identical to OtpSentAtEQ.
+func OtpSentAt(v time.Time) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldOtpSentAt), v))
+	})
+}
+
+// Otp applies equality check predicate on the "otp" field. It's identical to OtpEQ.
+func Otp(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldOtp), v))
+	})
+}
+
 // EmailChange applies equality check predicate on the "email_change" field. It's identical to EmailChangeEQ.
 func EmailChange(v string) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
@@ -861,6 +875,221 @@ func RecoveryTokenEqualFold(v string) predicate.User {
 func RecoveryTokenContainsFold(v string) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldRecoveryToken), v))
+	})
+}
+
+// OtpSentAtEQ applies the EQ predicate on the "otp_sent_at" field.
+func OtpSentAtEQ(v time.Time) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldOtpSentAt), v))
+	})
+}
+
+// OtpSentAtNEQ applies the NEQ predicate on the "otp_sent_at" field.
+func OtpSentAtNEQ(v time.Time) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldOtpSentAt), v))
+	})
+}
+
+// OtpSentAtIn applies the In predicate on the "otp_sent_at" field.
+func OtpSentAtIn(vs ...time.Time) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldOtpSentAt), v...))
+	})
+}
+
+// OtpSentAtNotIn applies the NotIn predicate on the "otp_sent_at" field.
+func OtpSentAtNotIn(vs ...time.Time) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldOtpSentAt), v...))
+	})
+}
+
+// OtpSentAtGT applies the GT predicate on the "otp_sent_at" field.
+func OtpSentAtGT(v time.Time) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldOtpSentAt), v))
+	})
+}
+
+// OtpSentAtGTE applies the GTE predicate on the "otp_sent_at" field.
+func OtpSentAtGTE(v time.Time) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldOtpSentAt), v))
+	})
+}
+
+// OtpSentAtLT applies the LT predicate on the "otp_sent_at" field.
+func OtpSentAtLT(v time.Time) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldOtpSentAt), v))
+	})
+}
+
+// OtpSentAtLTE applies the LTE predicate on the "otp_sent_at" field.
+func OtpSentAtLTE(v time.Time) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldOtpSentAt), v))
+	})
+}
+
+// OtpSentAtIsNil applies the IsNil predicate on the "otp_sent_at" field.
+func OtpSentAtIsNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldOtpSentAt)))
+	})
+}
+
+// OtpSentAtNotNil applies the NotNil predicate on the "otp_sent_at" field.
+func OtpSentAtNotNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldOtpSentAt)))
+	})
+}
+
+// OtpEQ applies the EQ predicate on the "otp" field.
+func OtpEQ(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldOtp), v))
+	})
+}
+
+// OtpNEQ applies the NEQ predicate on the "otp" field.
+func OtpNEQ(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldOtp), v))
+	})
+}
+
+// OtpIn applies the In predicate on the "otp" field.
+func OtpIn(vs ...string) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldOtp), v...))
+	})
+}
+
+// OtpNotIn applies the NotIn predicate on the "otp" field.
+func OtpNotIn(vs ...string) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldOtp), v...))
+	})
+}
+
+// OtpGT applies the GT predicate on the "otp" field.
+func OtpGT(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldOtp), v))
+	})
+}
+
+// OtpGTE applies the GTE predicate on the "otp" field.
+func OtpGTE(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldOtp), v))
+	})
+}
+
+// OtpLT applies the LT predicate on the "otp" field.
+func OtpLT(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldOtp), v))
+	})
+}
+
+// OtpLTE applies the LTE predicate on the "otp" field.
+func OtpLTE(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldOtp), v))
+	})
+}
+
+// OtpContains applies the Contains predicate on the "otp" field.
+func OtpContains(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldOtp), v))
+	})
+}
+
+// OtpHasPrefix applies the HasPrefix predicate on the "otp" field.
+func OtpHasPrefix(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldOtp), v))
+	})
+}
+
+// OtpHasSuffix applies the HasSuffix predicate on the "otp" field.
+func OtpHasSuffix(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldOtp), v))
+	})
+}
+
+// OtpIsNil applies the IsNil predicate on the "otp" field.
+func OtpIsNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldOtp)))
+	})
+}
+
+// OtpNotNil applies the NotNil predicate on the "otp" field.
+func OtpNotNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldOtp)))
+	})
+}
+
+// OtpEqualFold applies the EqualFold predicate on the "otp" field.
+func OtpEqualFold(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldOtp), v))
+	})
+}
+
+// OtpContainsFold applies the ContainsFold predicate on the "otp" field.
+func OtpContainsFold(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldOtp), v))
 	})
 }
 

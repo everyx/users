@@ -32,6 +32,10 @@ type User struct {
 	RecoverySentAt *time.Time `json:"recovery_sent_at,omitempty"`
 	// RecoveryToken holds the value of the "recovery_token" field.
 	RecoveryToken *string `json:"recovery_token,omitempty"`
+	// OtpSentAt holds the value of the "otp_sent_at" field.
+	OtpSentAt *time.Time `json:"otp_sent_at,omitempty"`
+	// Otp holds the value of the "otp" field.
+	Otp *string `json:"otp,omitempty"`
 	// EmailChange holds the value of the "email_change" field.
 	EmailChange string `json:"email_change,omitempty"`
 	// EmailChangeSentAt holds the value of the "email_change_sent_at" field.
@@ -59,6 +63,8 @@ func (*User) scanValues() []interface{} {
 		&sql.NullString{}, // confirmation_token
 		&sql.NullTime{},   // recovery_sent_at
 		&sql.NullString{}, // recovery_token
+		&sql.NullTime{},   // otp_sent_at
+		&sql.NullString{}, // otp
 		&sql.NullString{}, // email_change
 		&sql.NullTime{},   // email_change_sent_at
 		&sql.NullString{}, // email_change_token
@@ -120,43 +126,55 @@ func (u *User) assignValues(values ...interface{}) error {
 		u.RecoveryToken = new(string)
 		*u.RecoveryToken = value.String
 	}
-	if value, ok := values[7].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field email_change", values[7])
+	if value, ok := values[7].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field otp_sent_at", values[7])
+	} else if value.Valid {
+		u.OtpSentAt = new(time.Time)
+		*u.OtpSentAt = value.Time
+	}
+	if value, ok := values[8].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field otp", values[8])
+	} else if value.Valid {
+		u.Otp = new(string)
+		*u.Otp = value.String
+	}
+	if value, ok := values[9].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field email_change", values[9])
 	} else if value.Valid {
 		u.EmailChange = value.String
 	}
-	if value, ok := values[8].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field email_change_sent_at", values[8])
+	if value, ok := values[10].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field email_change_sent_at", values[10])
 	} else if value.Valid {
 		u.EmailChangeSentAt = new(time.Time)
 		*u.EmailChangeSentAt = value.Time
 	}
-	if value, ok := values[9].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field email_change_token", values[9])
+	if value, ok := values[11].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field email_change_token", values[11])
 	} else if value.Valid {
 		u.EmailChangeToken = new(string)
 		*u.EmailChangeToken = value.String
 	}
 
-	if value, ok := values[10].(*[]byte); !ok {
-		return fmt.Errorf("unexpected type %T for field metadata", values[10])
+	if value, ok := values[12].(*[]byte); !ok {
+		return fmt.Errorf("unexpected type %T for field metadata", values[12])
 	} else if value != nil && len(*value) > 0 {
 		if err := json.Unmarshal(*value, &u.Metadata); err != nil {
 			return fmt.Errorf("unmarshal field metadata: %v", err)
 		}
 	}
-	if value, ok := values[11].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field created_at", values[11])
+	if value, ok := values[13].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field created_at", values[13])
 	} else if value.Valid {
 		u.CreatedAt = value.Time
 	}
-	if value, ok := values[12].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field updated_at", values[12])
+	if value, ok := values[14].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field updated_at", values[14])
 	} else if value.Valid {
 		u.UpdatedAt = value.Time
 	}
-	if value, ok := values[13].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field last_signin_at", values[13])
+	if value, ok := values[15].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field last_signin_at", values[15])
 	} else if value.Valid {
 		u.LastSigninAt = new(time.Time)
 		*u.LastSigninAt = value.Time
@@ -206,6 +224,14 @@ func (u *User) String() string {
 	}
 	if v := u.RecoveryToken; v != nil {
 		builder.WriteString(", recovery_token=")
+		builder.WriteString(*v)
+	}
+	if v := u.OtpSentAt; v != nil {
+		builder.WriteString(", otp_sent_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	if v := u.Otp; v != nil {
+		builder.WriteString(", otp=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", email_change=")

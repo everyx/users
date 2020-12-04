@@ -373,6 +373,68 @@ func (a *API) ConfirmRecovery(token, password string) error {
 	return nil
 }
 
+func (a *API) OTP(email string) error {
+
+	if !isEmailValid(email) {
+		return fmt.Errorf("%w", ErrInvalidEmail)
+	}
+
+	id, err := a.userStore.UserIDByEmail(email)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrUserNotFound)
+	}
+
+	otp := uuid.New().String()
+	err = a.userStore.SaveOTP(id, otp)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	_, metadata, err := a.userStore.UserData(id)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	err = a.sendMail(OTP, otp, email, metadata)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	err = a.userStore.SaveOTPSentAt(id, time.Now())
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	return nil
+}
+
+func (a *API) LoginWithOTP(w http.ResponseWriter, r *http.Request, otp string) error {
+	id, err := a.userStore.UserIDByOTP(otp)
+	if err != nil {
+		return fmt.Errorf("%w", ErrUserNotFound)
+	}
+
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	token := uuid.New().String()
+	session.Values["id"] = id
+	session.Values["token"] = token
+	err = session.Save(r, w)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	err = a.userStore.DeleteOTP(id)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	return nil
+}
+
 func (a *API) UpdateMetaData(id string, metaData map[string]interface{}) error {
 	return a.userStore.UpsertMetaData(id, metaData)
 }

@@ -139,6 +139,46 @@ func (uu *UserUpdate) ClearRecoveryToken() *UserUpdate {
 	return uu
 }
 
+// SetOtpSentAt sets the otp_sent_at field.
+func (uu *UserUpdate) SetOtpSentAt(t time.Time) *UserUpdate {
+	uu.mutation.SetOtpSentAt(t)
+	return uu
+}
+
+// SetNillableOtpSentAt sets the otp_sent_at field if the given value is not nil.
+func (uu *UserUpdate) SetNillableOtpSentAt(t *time.Time) *UserUpdate {
+	if t != nil {
+		uu.SetOtpSentAt(*t)
+	}
+	return uu
+}
+
+// ClearOtpSentAt clears the value of otp_sent_at.
+func (uu *UserUpdate) ClearOtpSentAt() *UserUpdate {
+	uu.mutation.ClearOtpSentAt()
+	return uu
+}
+
+// SetOtp sets the otp field.
+func (uu *UserUpdate) SetOtp(s string) *UserUpdate {
+	uu.mutation.SetOtp(s)
+	return uu
+}
+
+// SetNillableOtp sets the otp field if the given value is not nil.
+func (uu *UserUpdate) SetNillableOtp(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetOtp(*s)
+	}
+	return uu
+}
+
+// ClearOtp clears the value of otp.
+func (uu *UserUpdate) ClearOtp() *UserUpdate {
+	uu.mutation.ClearOtp()
+	return uu
+}
+
 // SetEmailChange sets the email_change field.
 func (uu *UserUpdate) SetEmailChange(s string) *UserUpdate {
 	uu.mutation.SetEmailChange(s)
@@ -324,6 +364,11 @@ func (uu *UserUpdate) check() error {
 			return &ValidationError{Name: "recovery_token", err: fmt.Errorf("models: validator failed for field \"recovery_token\": %w", err)}
 		}
 	}
+	if v, ok := uu.mutation.Otp(); ok {
+		if err := user.OtpValidator(v); err != nil {
+			return &ValidationError{Name: "otp", err: fmt.Errorf("models: validator failed for field \"otp\": %w", err)}
+		}
+	}
 	if v, ok := uu.mutation.EmailChange(); ok {
 		if err := user.EmailChangeValidator(v); err != nil {
 			return &ValidationError{Name: "email_change", err: fmt.Errorf("models: validator failed for field \"email_change\": %w", err)}
@@ -432,6 +477,32 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Column: user.FieldRecoveryToken,
+		})
+	}
+	if value, ok := uu.mutation.OtpSentAt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: user.FieldOtpSentAt,
+		})
+	}
+	if uu.mutation.OtpSentAtCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Column: user.FieldOtpSentAt,
+		})
+	}
+	if value, ok := uu.mutation.Otp(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldOtp,
+		})
+	}
+	if uu.mutation.OtpCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: user.FieldOtp,
 		})
 	}
 	if value, ok := uu.mutation.EmailChange(); ok {
@@ -630,6 +701,46 @@ func (uuo *UserUpdateOne) ClearRecoveryToken() *UserUpdateOne {
 	return uuo
 }
 
+// SetOtpSentAt sets the otp_sent_at field.
+func (uuo *UserUpdateOne) SetOtpSentAt(t time.Time) *UserUpdateOne {
+	uuo.mutation.SetOtpSentAt(t)
+	return uuo
+}
+
+// SetNillableOtpSentAt sets the otp_sent_at field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableOtpSentAt(t *time.Time) *UserUpdateOne {
+	if t != nil {
+		uuo.SetOtpSentAt(*t)
+	}
+	return uuo
+}
+
+// ClearOtpSentAt clears the value of otp_sent_at.
+func (uuo *UserUpdateOne) ClearOtpSentAt() *UserUpdateOne {
+	uuo.mutation.ClearOtpSentAt()
+	return uuo
+}
+
+// SetOtp sets the otp field.
+func (uuo *UserUpdateOne) SetOtp(s string) *UserUpdateOne {
+	uuo.mutation.SetOtp(s)
+	return uuo
+}
+
+// SetNillableOtp sets the otp field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableOtp(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetOtp(*s)
+	}
+	return uuo
+}
+
+// ClearOtp clears the value of otp.
+func (uuo *UserUpdateOne) ClearOtp() *UserUpdateOne {
+	uuo.mutation.ClearOtp()
+	return uuo
+}
+
 // SetEmailChange sets the email_change field.
 func (uuo *UserUpdateOne) SetEmailChange(s string) *UserUpdateOne {
 	uuo.mutation.SetEmailChange(s)
@@ -815,6 +926,11 @@ func (uuo *UserUpdateOne) check() error {
 			return &ValidationError{Name: "recovery_token", err: fmt.Errorf("models: validator failed for field \"recovery_token\": %w", err)}
 		}
 	}
+	if v, ok := uuo.mutation.Otp(); ok {
+		if err := user.OtpValidator(v); err != nil {
+			return &ValidationError{Name: "otp", err: fmt.Errorf("models: validator failed for field \"otp\": %w", err)}
+		}
+	}
 	if v, ok := uuo.mutation.EmailChange(); ok {
 		if err := user.EmailChangeValidator(v); err != nil {
 			return &ValidationError{Name: "email_change", err: fmt.Errorf("models: validator failed for field \"email_change\": %w", err)}
@@ -921,6 +1037,32 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Column: user.FieldRecoveryToken,
+		})
+	}
+	if value, ok := uuo.mutation.OtpSentAt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: user.FieldOtpSentAt,
+		})
+	}
+	if uuo.mutation.OtpSentAtCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Column: user.FieldOtpSentAt,
+		})
+	}
+	if value, ok := uuo.mutation.Otp(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldOtp,
+		})
+	}
+	if uuo.mutation.OtpCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: user.FieldOtp,
 		})
 	}
 	if value, ok := uuo.mutation.EmailChange(); ok {

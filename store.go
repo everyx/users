@@ -27,6 +27,7 @@ type UserStore interface {
 	UserIDByConfirmationToken(token string) (string, error)
 	UserIDByRecoveryToken(token string) (string, error)
 	UserIDByEmailChangeToken(token string) (string, error)
+	UserIDByOTP(token string) (string, error)
 	DeleteUser(id string) error
 
 	GetPassword(id string) (string, error)
@@ -43,6 +44,11 @@ type UserStore interface {
 	SaveConfirmationTokenSentAt(id string, tokenSentAt time.Time) error
 	MarkConfirmed(id string, confirmed bool) error
 	DeleteConfirmToken(id string) error
+
+	// One time password
+	SaveOTP(id, otp string) error
+	SaveOTPSentAt(id string, otpSentAt time.Time) error
+	DeleteOTP(id string) error
 
 	// Recover Password
 	SaveRecoveryToken(id, token string) error

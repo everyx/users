@@ -33,6 +33,8 @@ var (
 		{Name: "confirmation_token", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "recovery_sent_at", Type: field.TypeTime, Nullable: true},
 		{Name: "recovery_token", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "otp_sent_at", Type: field.TypeTime, Nullable: true},
+		{Name: "otp", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "email_change", Type: field.TypeString, Nullable: true},
 		{Name: "email_change_sent_at", Type: field.TypeTime, Nullable: true},
 		{Name: "email_change_token", Type: field.TypeString, Unique: true, Nullable: true},

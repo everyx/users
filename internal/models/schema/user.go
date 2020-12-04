@@ -29,13 +29,14 @@ func (User) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("email").Unique().NotEmpty(),
 		field.String("password").NotEmpty().Sensitive().MinLen(8),
-
 		field.Bool("confirmed").Default(false).Optional(),
 		field.Time("confirmation_sent_at").Nillable().Optional(),
 		field.String("confirmation_token").NotEmpty().Optional().Nillable().Unique(),
 
 		field.Time("recovery_sent_at").Nillable().Optional(),
 		field.String("recovery_token").NotEmpty().Optional().Nillable().Unique(),
+		field.Time("otp_sent_at").Nillable().Optional(),
+		field.String("otp").NotEmpty().Optional().Nillable().Unique(),
 
 		field.String("email_change").NotEmpty().Optional(),
 		field.Time("email_change_sent_at").Nillable().Optional(),

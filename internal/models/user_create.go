@@ -103,6 +103,34 @@ func (uc *UserCreate) SetNillableRecoveryToken(s *string) *UserCreate {
 	return uc
 }
 
+// SetOtpSentAt sets the otp_sent_at field.
+func (uc *UserCreate) SetOtpSentAt(t time.Time) *UserCreate {
+	uc.mutation.SetOtpSentAt(t)
+	return uc
+}
+
+// SetNillableOtpSentAt sets the otp_sent_at field if the given value is not nil.
+func (uc *UserCreate) SetNillableOtpSentAt(t *time.Time) *UserCreate {
+	if t != nil {
+		uc.SetOtpSentAt(*t)
+	}
+	return uc
+}
+
+// SetOtp sets the otp field.
+func (uc *UserCreate) SetOtp(s string) *UserCreate {
+	uc.mutation.SetOtp(s)
+	return uc
+}
+
+// SetNillableOtp sets the otp field if the given value is not nil.
+func (uc *UserCreate) SetNillableOtp(s *string) *UserCreate {
+	if s != nil {
+		uc.SetOtp(*s)
+	}
+	return uc
+}
+
 // SetEmailChange sets the email_change field.
 func (uc *UserCreate) SetEmailChange(s string) *UserCreate {
 	uc.mutation.SetEmailChange(s)
@@ -297,6 +325,11 @@ func (uc *UserCreate) check() error {
 			return &ValidationError{Name: "recovery_token", err: fmt.Errorf("models: validator failed for field \"recovery_token\": %w", err)}
 		}
 	}
+	if v, ok := uc.mutation.Otp(); ok {
+		if err := user.OtpValidator(v); err != nil {
+			return &ValidationError{Name: "otp", err: fmt.Errorf("models: validator failed for field \"otp\": %w", err)}
+		}
+	}
 	if v, ok := uc.mutation.EmailChange(); ok {
 		if err := user.EmailChangeValidator(v); err != nil {
 			return &ValidationError{Name: "email_change", err: fmt.Errorf("models: validator failed for field \"email_change\": %w", err)}
@@ -400,6 +433,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Column: user.FieldRecoveryToken,
 		})
 		_node.RecoveryToken = &value
+	}
+	if value, ok := uc.mutation.OtpSentAt(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: user.FieldOtpSentAt,
+		})
+		_node.OtpSentAt = &value
+	}
+	if value, ok := uc.mutation.Otp(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldOtp,
+		})
+		_node.Otp = &value
 	}
 	if value, ok := uc.mutation.EmailChange(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

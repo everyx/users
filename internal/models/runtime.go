@@ -63,20 +63,24 @@ func init() {
 	userDescRecoveryToken := userFields[7].Descriptor()
 	// user.RecoveryTokenValidator is a validator for the "recovery_token" field. It is called by the builders before save.
 	user.RecoveryTokenValidator = userDescRecoveryToken.Validators[0].(func(string) error)
+	// userDescOtp is the schema descriptor for otp field.
+	userDescOtp := userFields[9].Descriptor()
+	// user.OtpValidator is a validator for the "otp" field. It is called by the builders before save.
+	user.OtpValidator = userDescOtp.Validators[0].(func(string) error)
 	// userDescEmailChange is the schema descriptor for email_change field.
-	userDescEmailChange := userFields[8].Descriptor()
+	userDescEmailChange := userFields[10].Descriptor()
 	// user.EmailChangeValidator is a validator for the "email_change" field. It is called by the builders before save.
 	user.EmailChangeValidator = userDescEmailChange.Validators[0].(func(string) error)
 	// userDescEmailChangeToken is the schema descriptor for email_change_token field.
-	userDescEmailChangeToken := userFields[10].Descriptor()
+	userDescEmailChangeToken := userFields[12].Descriptor()
 	// user.EmailChangeTokenValidator is a validator for the "email_change_token" field. It is called by the builders before save.
 	user.EmailChangeTokenValidator = userDescEmailChangeToken.Validators[0].(func(string) error)
 	// userDescCreatedAt is the schema descriptor for created_at field.
-	userDescCreatedAt := userFields[12].Descriptor()
+	userDescCreatedAt := userFields[14].Descriptor()
 	// user.DefaultCreatedAt holds the default value on creation for the created_at field.
 	user.DefaultCreatedAt = userDescCreatedAt.Default.(func() time.Time)
 	// userDescUpdatedAt is the schema descriptor for updated_at field.
-	userDescUpdatedAt := userFields[13].Descriptor()
+	userDescUpdatedAt := userFields[15].Descriptor()
 	// user.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

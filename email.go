@@ -32,6 +32,7 @@ const (
 	Confirmation = iota
 	Recovery
 	ChangeEmail
+	OTP
 )
 
 type SendMailFunc func(mailType MailType, token, sendTo string, metadata map[string]interface{}) error

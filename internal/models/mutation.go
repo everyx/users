@@ -530,6 +530,8 @@ type UserMutation struct {
 	confirmation_token   *string
 	recovery_sent_at     *time.Time
 	recovery_token       *string
+	otp_sent_at          *time.Time
+	otp                  *string
 	email_change         *string
 	email_change_sent_at *time.Time
 	email_change_token   *string
@@ -952,6 +954,106 @@ func (m *UserMutation) ResetRecoveryToken() {
 	delete(m.clearedFields, user.FieldRecoveryToken)
 }
 
+// SetOtpSentAt sets the otp_sent_at field.
+func (m *UserMutation) SetOtpSentAt(t time.Time) {
+	m.otp_sent_at = &t
+}
+
+// OtpSentAt returns the otp_sent_at value in the mutation.
+func (m *UserMutation) OtpSentAt() (r time.Time, exists bool) {
+	v := m.otp_sent_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOtpSentAt returns the old otp_sent_at value of the User.
+// If the User object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *UserMutation) OldOtpSentAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldOtpSentAt is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldOtpSentAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOtpSentAt: %w", err)
+	}
+	return oldValue.OtpSentAt, nil
+}
+
+// ClearOtpSentAt clears the value of otp_sent_at.
+func (m *UserMutation) ClearOtpSentAt() {
+	m.otp_sent_at = nil
+	m.clearedFields[user.FieldOtpSentAt] = struct{}{}
+}
+
+// OtpSentAtCleared returns if the field otp_sent_at was cleared in this mutation.
+func (m *UserMutation) OtpSentAtCleared() bool {
+	_, ok := m.clearedFields[user.FieldOtpSentAt]
+	return ok
+}
+
+// ResetOtpSentAt reset all changes of the "otp_sent_at" field.
+func (m *UserMutation) ResetOtpSentAt() {
+	m.otp_sent_at = nil
+	delete(m.clearedFields, user.FieldOtpSentAt)
+}
+
+// SetOtp sets the otp field.
+func (m *UserMutation) SetOtp(s string) {
+	m.otp = &s
+}
+
+// Otp returns the otp value in the mutation.
+func (m *UserMutation) Otp() (r string, exists bool) {
+	v := m.otp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOtp returns the old otp value of the User.
+// If the User object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *UserMutation) OldOtp(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldOtp is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldOtp requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOtp: %w", err)
+	}
+	return oldValue.Otp, nil
+}
+
+// ClearOtp clears the value of otp.
+func (m *UserMutation) ClearOtp() {
+	m.otp = nil
+	m.clearedFields[user.FieldOtp] = struct{}{}
+}
+
+// OtpCleared returns if the field otp was cleared in this mutation.
+func (m *UserMutation) OtpCleared() bool {
+	_, ok := m.clearedFields[user.FieldOtp]
+	return ok
+}
+
+// ResetOtp reset all changes of the "otp" field.
+func (m *UserMutation) ResetOtp() {
+	m.otp = nil
+	delete(m.clearedFields, user.FieldOtp)
+}
+
 // SetEmailChange sets the email_change field.
 func (m *UserMutation) SetEmailChange(s string) {
 	m.email_change = &s
@@ -1277,7 +1379,7 @@ func (m *UserMutation) Type() string {
 // this mutation. Note that, in order to get all numeric
 // fields that were in/decremented, call AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 16)
 	if m.email != nil {
 		fields = append(fields, user.FieldEmail)
 	}
@@ -1298,6 +1400,12 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.recovery_token != nil {
 		fields = append(fields, user.FieldRecoveryToken)
+	}
+	if m.otp_sent_at != nil {
+		fields = append(fields, user.FieldOtpSentAt)
+	}
+	if m.otp != nil {
+		fields = append(fields, user.FieldOtp)
 	}
 	if m.email_change != nil {
 		fields = append(fields, user.FieldEmailChange)
@@ -1342,6 +1450,10 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.RecoverySentAt()
 	case user.FieldRecoveryToken:
 		return m.RecoveryToken()
+	case user.FieldOtpSentAt:
+		return m.OtpSentAt()
+	case user.FieldOtp:
+		return m.Otp()
 	case user.FieldEmailChange:
 		return m.EmailChange()
 	case user.FieldEmailChangeSentAt:
@@ -1379,6 +1491,10 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldRecoverySentAt(ctx)
 	case user.FieldRecoveryToken:
 		return m.OldRecoveryToken(ctx)
+	case user.FieldOtpSentAt:
+		return m.OldOtpSentAt(ctx)
+	case user.FieldOtp:
+		return m.OldOtp(ctx)
 	case user.FieldEmailChange:
 		return m.OldEmailChange(ctx)
 	case user.FieldEmailChangeSentAt:
@@ -1450,6 +1566,20 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRecoveryToken(v)
+		return nil
+	case user.FieldOtpSentAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOtpSentAt(v)
+		return nil
+	case user.FieldOtp:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOtp(v)
 		return nil
 	case user.FieldEmailChange:
 		v, ok := value.(string)
@@ -1545,6 +1675,12 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldRecoveryToken) {
 		fields = append(fields, user.FieldRecoveryToken)
 	}
+	if m.FieldCleared(user.FieldOtpSentAt) {
+		fields = append(fields, user.FieldOtpSentAt)
+	}
+	if m.FieldCleared(user.FieldOtp) {
+		fields = append(fields, user.FieldOtp)
+	}
 	if m.FieldCleared(user.FieldEmailChange) {
 		fields = append(fields, user.FieldEmailChange)
 	}
@@ -1585,6 +1721,12 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldRecoveryToken:
 		m.ClearRecoveryToken()
+		return nil
+	case user.FieldOtpSentAt:
+		m.ClearOtpSentAt()
+		return nil
+	case user.FieldOtp:
+		m.ClearOtp()
 		return nil
 	case user.FieldEmailChange:
 		m.ClearEmailChange()
@@ -1627,6 +1769,12 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldRecoveryToken:
 		m.ResetRecoveryToken()
+		return nil
+	case user.FieldOtpSentAt:
+		m.ResetOtpSentAt()
+		return nil
+	case user.FieldOtp:
+		m.ResetOtp()
 		return nil
 	case user.FieldEmailChange:
 		m.ResetEmailChange()

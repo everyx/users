@@ -27,6 +27,10 @@ const (
 	FieldRecoverySentAt = "recovery_sent_at"
 	// FieldRecoveryToken holds the string denoting the recovery_token field in the database.
 	FieldRecoveryToken = "recovery_token"
+	// FieldOtpSentAt holds the string denoting the otp_sent_at field in the database.
+	FieldOtpSentAt = "otp_sent_at"
+	// FieldOtp holds the string denoting the otp field in the database.
+	FieldOtp = "otp"
 	// FieldEmailChange holds the string denoting the email_change field in the database.
 	FieldEmailChange = "email_change"
 	// FieldEmailChangeSentAt holds the string denoting the email_change_sent_at field in the database.
@@ -56,6 +60,8 @@ var Columns = []string{
 	FieldConfirmationToken,
 	FieldRecoverySentAt,
 	FieldRecoveryToken,
+	FieldOtpSentAt,
+	FieldOtp,
 	FieldEmailChange,
 	FieldEmailChangeSentAt,
 	FieldEmailChangeToken,
@@ -86,6 +92,8 @@ var (
 	ConfirmationTokenValidator func(string) error
 	// RecoveryTokenValidator is a validator for the "recovery_token" field. It is called by the builders before save.
 	RecoveryTokenValidator func(string) error
+	// OtpValidator is a validator for the "otp" field. It is called by the builders before save.
+	OtpValidator func(string) error
 	// EmailChangeValidator is a validator for the "email_change" field. It is called by the builders before save.
 	EmailChangeValidator func(string) error
 	// EmailChangeTokenValidator is a validator for the "email_change_token" field. It is called by the builders before save.
