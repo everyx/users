@@ -160,6 +160,19 @@ func (d *DefaultUserStore) UpdateEmail(id, email string) error {
 	return nil
 }
 
+func (d *DefaultUserStore) UpdateProvider(id, provider string) error {
+	u, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = u.SetProvider(provider).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d *DefaultUserStore) SaveConfirmationToken(id, token string) error {
 	u, err := d.updateUserBuilder(id)
 	if err != nil {

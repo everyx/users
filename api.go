@@ -42,7 +42,6 @@ func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
 	}
 
 	if len(cfg.GothProviders) > 0 {
-		fmt.Printf("%+v\n", cfg.GothProviders[0])
 		goth.UseProviders(cfg.GothProviders...)
 		gothic.Store = sessionStore
 	}
@@ -491,9 +490,26 @@ func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request) error {
 		metadata[k] = v
 	}
 
-	id, err := a.userStore.New(usr.Email, usr.AccessToken, usr.Provider, metadata)
+	var id string
+
+	id, err = a.userStore.UserIDByEmail(usr.Email)
 	if err != nil {
-		return err
+		// user not found, create a user
+		id, err = a.userStore.New(usr.Email, usr.AccessToken, usr.Provider, metadata)
+		if err != nil {
+			return err
+		}
+	} else {
+		// otherwise just update provider & metadata
+		err = a.userStore.UpdateProvider(id, usr.Provider)
+		if err != nil {
+			return err
+		}
+		err = a.userStore.UpsertMetaData(id, metadata)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	session, err := a.sessionStore.Get(r, "auth-session")
@@ -538,5 +554,6 @@ func (a *API) HandleGothLogin(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *API) HandleGothLogout(w http.ResponseWriter, r *http.Request) error {
+	a.Logout(w, r)
 	return gothic.Logout(w, r)
 }

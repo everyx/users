@@ -38,6 +38,7 @@ type UserStore interface {
 	UpdatePassword(id, password string) error
 	// Update Email
 	UpdateEmail(id, email string) error
+	UpdateProvider(id, provider string) error
 
 	// Confirm Email
 	SaveConfirmationToken(id, token string) error
