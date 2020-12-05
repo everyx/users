@@ -157,6 +157,12 @@ func (a *API) Login(w http.ResponseWriter, r *http.Request, email, password stri
 		return fmt.Errorf("err: %v, %w", err, ErrWrongPassword)
 	}
 
+	// set provider
+	err = a.userStore.UpdateProvider(id, "email_signup")
+	if err != nil {
+		return err
+	}
+
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
 		return fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
