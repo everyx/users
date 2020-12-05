@@ -6,6 +6,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/structs"
+
+	"github.com/markbates/goth/gothic"
+
+	"github.com/markbates/goth"
+
 	"github.com/google/uuid"
 
 	"golang.org/x/crypto/bcrypt"
@@ -22,6 +28,7 @@ type Config struct {
 	Datasource    string
 	SessionSecret string
 	SendMail      SendMailFunc
+	GothProviders []goth.Provider
 }
 
 func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
@@ -32,6 +39,12 @@ func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
 	sessionStore, err := NewDefaultSessionStore(ctx, cfg.Driver, cfg.Datasource, []byte(cfg.SessionSecret))
 	if err != nil {
 		return nil, err
+	}
+
+	if len(cfg.GothProviders) > 0 {
+		fmt.Printf("%+v\n", cfg.GothProviders[0])
+		goth.UseProviders(cfg.GothProviders...)
+		gothic.Store = sessionStore
 	}
 
 	return &API{
@@ -87,7 +100,7 @@ func (a *API) Signup(email, password string, metadata map[string]interface{}) er
 		return fmt.Errorf("%w", ErrUserExists)
 	}
 
-	id, err := a.userStore.New(email, hashedPassword, metadata)
+	id, err := a.userStore.New(email, hashedPassword, "email_signup", metadata)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -441,4 +454,89 @@ func (a *API) UpdateMetaData(id string, metaData map[string]interface{}) error {
 
 func (a *API) DeleteMetaDataKeys(id string, keys []string) error {
 	return a.userStore.DeleteKeysMetaData(id, keys)
+}
+
+func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request) error {
+	usr, err := gothic.CompleteUserAuth(w, r)
+	if err != nil {
+		return err
+	}
+
+	type User struct {
+		RawData           map[string]interface{}
+		Provider          string
+		Email             string
+		Name              string
+		FirstName         string
+		LastName          string
+		NickName          string
+		Description       string
+		UserID            string
+		AvatarURL         string
+		Location          string
+		AccessToken       string
+		AccessTokenSecret string
+		RefreshToken      string
+		ExpiresAt         time.Time
+		IDToken           string
+	}
+
+	metadata := map[string]interface{}{
+		"name": usr.Name,
+	}
+
+	userMap := structs.Map(usr)
+
+	for k, v := range userMap {
+		metadata[k] = v
+	}
+
+	id, err := a.userStore.New(usr.Email, usr.AccessToken, usr.Provider, metadata)
+	if err != nil {
+		return err
+	}
+
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	token := uuid.New().String()
+	session.Values["id"] = id
+	session.Values["token"] = token
+	err = session.Save(r, w)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	return nil
+}
+
+func (a *API) HandleGothLogin(w http.ResponseWriter, r *http.Request) error {
+	// try to get the user without re-authenticating
+	if usr, err := gothic.CompleteUserAuth(w, r); err == nil {
+		id, err := a.userStore.UserIDByEmail(usr.Email)
+		if err != nil {
+			return fmt.Errorf("err: %v, %w", err, ErrUserNotFound)
+		}
+		session, err := a.sessionStore.Get(r, "auth-session")
+		if err != nil {
+			return fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
+		}
+
+		token := uuid.New().String()
+		session.Values["id"] = id
+		session.Values["token"] = token
+		err = session.Save(r, w)
+		if err != nil {
+			return fmt.Errorf("%v %w", err, ErrInternal)
+		}
+	} else {
+		gothic.BeginAuthHandler(w, r)
+	}
+	return nil
+}
+
+func (a *API) HandleGothLogout(w http.ResponseWriter, r *http.Request) error {
+	return gothic.Logout(w, r)
 }

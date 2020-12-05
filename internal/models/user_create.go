@@ -21,6 +21,12 @@ type UserCreate struct {
 	hooks    []Hook
 }
 
+// SetProvider sets the provider field.
+func (uc *UserCreate) SetProvider(s string) *UserCreate {
+	uc.mutation.SetProvider(s)
+	return uc
+}
+
 // SetEmail sets the email field.
 func (uc *UserCreate) SetEmail(s string) *UserCreate {
 	uc.mutation.SetEmail(s)
@@ -299,6 +305,14 @@ func (uc *UserCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (uc *UserCreate) check() error {
+	if _, ok := uc.mutation.Provider(); !ok {
+		return &ValidationError{Name: "provider", err: errors.New("models: missing required field \"provider\"")}
+	}
+	if v, ok := uc.mutation.Provider(); ok {
+		if err := user.ProviderValidator(v); err != nil {
+			return &ValidationError{Name: "provider", err: fmt.Errorf("models: validator failed for field \"provider\": %w", err)}
+		}
+	}
 	if _, ok := uc.mutation.Email(); !ok {
 		return &ValidationError{Name: "email", err: errors.New("models: missing required field \"email\"")}
 	}
@@ -377,6 +391,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if id, ok := uc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
+	}
+	if value, ok := uc.mutation.Provider(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldProvider,
+		})
+		_node.Provider = value
 	}
 	if value, ok := uc.mutation.Email(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

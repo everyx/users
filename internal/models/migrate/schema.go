@@ -26,6 +26,7 @@ var (
 	// UsersxColumns holds the columns for the "usersx" table.
 	UsersxColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "provider", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "password", Type: field.TypeString},
 		{Name: "confirmed", Type: field.TypeBool, Nullable: true},

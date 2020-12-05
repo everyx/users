@@ -21,7 +21,7 @@ const defaultPath = "/"
 // UserStore represents the data store for the User model
 type UserStore interface {
 	// Create, Delete
-	New(email, password string, meta map[string]interface{}) (string, error)
+	New(email, password, provider string, meta map[string]interface{}) (string, error)
 	UserData(id string) (string, map[string]interface{}, error)
 	UserIDByEmail(email string) (string, error)
 	UserIDByConfirmationToken(token string) (string, error)

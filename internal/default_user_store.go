@@ -32,10 +32,11 @@ func (d *DefaultUserStore) updateUserBuilder(id string) (*models.UserUpdateOne, 
 	return d.Client.User.UpdateOneID(uid), nil
 }
 
-func (d *DefaultUserStore) New(email, password string, meta map[string]interface{}) (string, error) {
+func (d *DefaultUserStore) New(email, password, provider string, meta map[string]interface{}) (string, error) {
 	usr, err := d.Client.User.Create().
 		SetEmail(email).
 		SetPassword(password).
+		SetProvider(provider).
 		SetMetadata(meta).
 		Save(d.Ctx)
 	if err != nil {
