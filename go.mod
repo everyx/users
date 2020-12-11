@@ -11,6 +11,7 @@ require (
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/lib/pq v1.8.0
+	github.com/lithammer/shortuuid/v3 v3.0.5 // indirect
 	github.com/markbates/goth v1.66.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.4
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9

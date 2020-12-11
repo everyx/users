@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/lithammer/shortuuid/v3"
 
 	"github.com/fatih/structs"
 
@@ -202,6 +205,33 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 			contentType = formContentType
 		}
 
+		authHeader := r.Header.Get("Authorization")
+
+		if contentType == jsonContentType && strings.Contains(authHeader, "Bearer") {
+			parts := strings.Split(authHeader, "Bearer ")
+			if len(parts) != 2 {
+				http.Error(w, "Unauthorized", 401)
+				return
+			}
+
+			hashedAPIKey, err := hashPassword(parts[1])
+			if err != nil {
+				http.Error(w, "Unauthorized: internal error", 401)
+				return
+			}
+
+			id, err := a.userStore.UserIDByAPIKey(hashedAPIKey)
+			if id == "" || err != nil {
+				http.Error(w, "Unauthorized", 401)
+				return
+			}
+
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, ctxUserIdKey, id)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
 		redirectTo := fmt.Sprintf("/login?from=%s", r.URL.Path)
 
 		session, err := a.sessionStore.Get(r, "auth-session")
@@ -237,28 +267,28 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 	})
 }
 
-func (a *API) LoggedInUser(r *http.Request) (string, string, map[string]interface{}, error) {
+func (a *API) LoggedInUser(r *http.Request) (string, string, string, map[string]interface{}, error) {
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
-		return "", "", nil, fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
+		return "", "", "", nil, fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
 	}
 
 	id, ok := session.Values["id"]
 	if !ok {
-		return "", "", nil, fmt.Errorf("%w", ErrUserNotLoggedIn)
+		return "", "", "", nil, fmt.Errorf("%w", ErrUserNotLoggedIn)
 	}
 
 	userID, ok := id.(string)
 	if !ok {
-		return "", "", nil, fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
+		return "", "", "", nil, fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
 	}
 
-	email, metadata, err := a.userStore.UserData(userID)
+	email, apiKey, metadata, err := a.userStore.UserData(userID)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("%v, %w", err, ErrUserNotLoggedIn)
+		return "", "", "", nil, fmt.Errorf("%v, %w", err, ErrUserNotLoggedIn)
 	}
 
-	return userID, email, metadata, nil
+	return userID, email, apiKey, metadata, nil
 }
 
 func (a *API) ConfirmEmail(token string) error {
@@ -284,7 +314,7 @@ func (a *API) ChangeEmail(id, newEmail string) error {
 		return fmt.Errorf("%w", ErrInvalidEmail)
 	}
 
-	email, metadata, err := a.userStore.UserData(id)
+	email, _, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		return fmt.Errorf("%w", ErrInternal)
 	}
@@ -349,7 +379,7 @@ func (a *API) Recovery(email string) error {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	_, metadata, err := a.userStore.UserData(id)
+	_, _, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -408,7 +438,7 @@ func (a *API) OTP(email string) error {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	_, metadata, err := a.userStore.UserData(id)
+	_, _, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -424,6 +454,36 @@ func (a *API) OTP(email string) error {
 	}
 
 	return nil
+}
+
+func (a *API) ResetAPIKey(r *http.Request) (string, error) {
+
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return "", fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	id, ok := session.Values["id"]
+	if !ok {
+		return "", fmt.Errorf("%w", ErrUserNotLoggedIn)
+	}
+
+	userID, ok := id.(string)
+	if !ok {
+		return "", fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
+	}
+	apiKey := shortuuid.New()
+	hashedAPIKey, err := hashPassword(apiKey)
+	if err != nil {
+		return "", fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	err = a.userStore.UpdateAPIKey(userID, hashedAPIKey)
+	if err != nil {
+		return "", fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	return apiKey, nil
 }
 
 func (a *API) LoginWithOTP(w http.ResponseWriter, r *http.Request, otp string) error {
@@ -562,4 +622,22 @@ func (a *API) HandleGothLogin(w http.ResponseWriter, r *http.Request) error {
 func (a *API) HandleGothLogout(w http.ResponseWriter, r *http.Request) error {
 	a.Logout(w, r)
 	return gothic.Logout(w, r)
+}
+
+func (a *API) DeleteUser(r *http.Request) error {
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	id, ok := session.Values["id"]
+	if !ok {
+		return fmt.Errorf("%w", ErrUserNotLoggedIn)
+	}
+
+	userID, ok := id.(string)
+	if !ok {
+		return fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
+	}
+	return a.userStore.DeleteUser(userID)
 }
