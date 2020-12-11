@@ -30,6 +30,7 @@ func (User) Fields() []ent.Field {
 		field.String("provider").NotEmpty(),
 		field.String("email").Unique().NotEmpty(),
 		field.String("password").NotEmpty().Sensitive().MinLen(8),
+		field.String("api_key").NotEmpty().Sensitive().Optional(),
 		field.Bool("confirmed").Default(false).Optional(),
 		field.Time("confirmation_sent_at").Nillable().Optional(),
 		field.String("confirmation_token").NotEmpty().Optional().Nillable().Unique(),

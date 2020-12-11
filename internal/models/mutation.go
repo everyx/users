@@ -526,6 +526,7 @@ type UserMutation struct {
 	provider             *string
 	email                *string
 	password             *string
+	api_key              *string
 	confirmed            *bool
 	confirmation_sent_at *time.Time
 	confirmation_token   *string
@@ -740,6 +741,56 @@ func (m *UserMutation) OldPassword(ctx context.Context) (v string, err error) {
 // ResetPassword reset all changes of the "password" field.
 func (m *UserMutation) ResetPassword() {
 	m.password = nil
+}
+
+// SetAPIKey sets the api_key field.
+func (m *UserMutation) SetAPIKey(s string) {
+	m.api_key = &s
+}
+
+// APIKey returns the api_key value in the mutation.
+func (m *UserMutation) APIKey() (r string, exists bool) {
+	v := m.api_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAPIKey returns the old api_key value of the User.
+// If the User object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *UserMutation) OldAPIKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldAPIKey is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldAPIKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAPIKey: %w", err)
+	}
+	return oldValue.APIKey, nil
+}
+
+// ClearAPIKey clears the value of api_key.
+func (m *UserMutation) ClearAPIKey() {
+	m.api_key = nil
+	m.clearedFields[user.FieldAPIKey] = struct{}{}
+}
+
+// APIKeyCleared returns if the field api_key was cleared in this mutation.
+func (m *UserMutation) APIKeyCleared() bool {
+	_, ok := m.clearedFields[user.FieldAPIKey]
+	return ok
+}
+
+// ResetAPIKey reset all changes of the "api_key" field.
+func (m *UserMutation) ResetAPIKey() {
+	m.api_key = nil
+	delete(m.clearedFields, user.FieldAPIKey)
 }
 
 // SetConfirmed sets the confirmed field.
@@ -1417,7 +1468,7 @@ func (m *UserMutation) Type() string {
 // this mutation. Note that, in order to get all numeric
 // fields that were in/decremented, call AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 18)
 	if m.provider != nil {
 		fields = append(fields, user.FieldProvider)
 	}
@@ -1426,6 +1477,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.password != nil {
 		fields = append(fields, user.FieldPassword)
+	}
+	if m.api_key != nil {
+		fields = append(fields, user.FieldAPIKey)
 	}
 	if m.confirmed != nil {
 		fields = append(fields, user.FieldConfirmed)
@@ -1483,6 +1537,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.Email()
 	case user.FieldPassword:
 		return m.Password()
+	case user.FieldAPIKey:
+		return m.APIKey()
 	case user.FieldConfirmed:
 		return m.Confirmed()
 	case user.FieldConfirmationSentAt:
@@ -1526,6 +1582,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldEmail(ctx)
 	case user.FieldPassword:
 		return m.OldPassword(ctx)
+	case user.FieldAPIKey:
+		return m.OldAPIKey(ctx)
 	case user.FieldConfirmed:
 		return m.OldConfirmed(ctx)
 	case user.FieldConfirmationSentAt:
@@ -1583,6 +1641,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPassword(v)
+		return nil
+	case user.FieldAPIKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAPIKey(v)
 		return nil
 	case user.FieldConfirmed:
 		v, ok := value.(bool)
@@ -1712,6 +1777,9 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 // during this mutation.
 func (m *UserMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(user.FieldAPIKey) {
+		fields = append(fields, user.FieldAPIKey)
+	}
 	if m.FieldCleared(user.FieldConfirmed) {
 		fields = append(fields, user.FieldConfirmed)
 	}
@@ -1759,6 +1827,9 @@ func (m *UserMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UserMutation) ClearField(name string) error {
 	switch name {
+	case user.FieldAPIKey:
+		m.ClearAPIKey()
+		return nil
 	case user.FieldConfirmed:
 		m.ClearConfirmed()
 		return nil
@@ -1809,6 +1880,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldPassword:
 		m.ResetPassword()
+		return nil
+	case user.FieldAPIKey:
+		m.ResetAPIKey()
 		return nil
 	case user.FieldConfirmed:
 		m.ResetConfirmed()

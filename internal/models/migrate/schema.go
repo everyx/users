@@ -29,6 +29,7 @@ var (
 		{Name: "provider", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "password", Type: field.TypeString},
+		{Name: "api_key", Type: field.TypeString, Nullable: true},
 		{Name: "confirmed", Type: field.TypeBool, Nullable: true},
 		{Name: "confirmation_sent_at", Type: field.TypeTime, Nullable: true},
 		{Name: "confirmation_token", Type: field.TypeString, Unique: true, Nullable: true},

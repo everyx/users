@@ -29,7 +29,7 @@ func (d *DefaultUserStore) updateUserBuilder(id string) (*models.UserUpdateOne, 
 	if err != nil {
 		return nil, err
 	}
-	return d.Client.User.UpdateOneID(uid), nil
+	return d.Client.User.UpdateOneID(uid).SetUpdatedAt(time.Now()), nil
 }
 
 func (d *DefaultUserStore) New(email, password, provider string, meta map[string]interface{}) (string, error) {
@@ -45,13 +45,13 @@ func (d *DefaultUserStore) New(email, password, provider string, meta map[string
 	return usr.ID.String(), nil
 }
 
-func (d *DefaultUserStore) UserData(id string) (string, map[string]interface{}, error) {
+func (d *DefaultUserStore) UserData(id string) (string, string, map[string]interface{}, error) {
 	usr, err := d.getUser(id)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
-	return usr.Email, usr.Metadata, nil
+	return usr.Email, usr.APIKey, usr.Metadata, nil
 }
 
 func (d *DefaultUserStore) UserIDByEmail(email string) (string, error) {
@@ -99,6 +99,15 @@ func (d *DefaultUserStore) UserIDByOTP(otp string) (string, error) {
 	return usr.ID.String(), nil
 }
 
+func (d *DefaultUserStore) UserIDByAPIKey(apiKey string) (string, error) {
+	usr, err := d.Client.User.Query().Where(user.APIKey(apiKey)).Only(d.Ctx)
+	if err != nil {
+		return "", err
+	}
+
+	return usr.ID.String(), nil
+}
+
 func (d *DefaultUserStore) GetPassword(id string) (string, error) {
 	usr, err := d.getUser(id)
 	if err != nil {
@@ -106,6 +115,15 @@ func (d *DefaultUserStore) GetPassword(id string) (string, error) {
 	}
 
 	return usr.Password, nil
+}
+
+func (d *DefaultUserStore) GetAPIKey(id string) (string, error) {
+	usr, err := d.getUser(id)
+	if err != nil {
+		return "", err
+	}
+
+	return usr.APIKey, nil
 }
 
 func (d *DefaultUserStore) GetEmailChange(id string) (string, error) {
@@ -140,6 +158,18 @@ func (d *DefaultUserStore) UpdatePassword(id, password string) error {
 		return err
 	}
 	_, err = u.SetPassword(password).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (d *DefaultUserStore) UpdateAPIKey(id, apiKey string) error {
+	u, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = u.SetAPIKey(apiKey).Save(d.Ctx)
 	if err != nil {
 		return err
 	}

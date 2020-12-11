@@ -55,36 +55,40 @@ func init() {
 			return nil
 		}
 	}()
+	// userDescAPIKey is the schema descriptor for api_key field.
+	userDescAPIKey := userFields[4].Descriptor()
+	// user.APIKeyValidator is a validator for the "api_key" field. It is called by the builders before save.
+	user.APIKeyValidator = userDescAPIKey.Validators[0].(func(string) error)
 	// userDescConfirmed is the schema descriptor for confirmed field.
-	userDescConfirmed := userFields[4].Descriptor()
+	userDescConfirmed := userFields[5].Descriptor()
 	// user.DefaultConfirmed holds the default value on creation for the confirmed field.
 	user.DefaultConfirmed = userDescConfirmed.Default.(bool)
 	// userDescConfirmationToken is the schema descriptor for confirmation_token field.
-	userDescConfirmationToken := userFields[6].Descriptor()
+	userDescConfirmationToken := userFields[7].Descriptor()
 	// user.ConfirmationTokenValidator is a validator for the "confirmation_token" field. It is called by the builders before save.
 	user.ConfirmationTokenValidator = userDescConfirmationToken.Validators[0].(func(string) error)
 	// userDescRecoveryToken is the schema descriptor for recovery_token field.
-	userDescRecoveryToken := userFields[8].Descriptor()
+	userDescRecoveryToken := userFields[9].Descriptor()
 	// user.RecoveryTokenValidator is a validator for the "recovery_token" field. It is called by the builders before save.
 	user.RecoveryTokenValidator = userDescRecoveryToken.Validators[0].(func(string) error)
 	// userDescOtp is the schema descriptor for otp field.
-	userDescOtp := userFields[10].Descriptor()
+	userDescOtp := userFields[11].Descriptor()
 	// user.OtpValidator is a validator for the "otp" field. It is called by the builders before save.
 	user.OtpValidator = userDescOtp.Validators[0].(func(string) error)
 	// userDescEmailChange is the schema descriptor for email_change field.
-	userDescEmailChange := userFields[11].Descriptor()
+	userDescEmailChange := userFields[12].Descriptor()
 	// user.EmailChangeValidator is a validator for the "email_change" field. It is called by the builders before save.
 	user.EmailChangeValidator = userDescEmailChange.Validators[0].(func(string) error)
 	// userDescEmailChangeToken is the schema descriptor for email_change_token field.
-	userDescEmailChangeToken := userFields[13].Descriptor()
+	userDescEmailChangeToken := userFields[14].Descriptor()
 	// user.EmailChangeTokenValidator is a validator for the "email_change_token" field. It is called by the builders before save.
 	user.EmailChangeTokenValidator = userDescEmailChangeToken.Validators[0].(func(string) error)
 	// userDescCreatedAt is the schema descriptor for created_at field.
-	userDescCreatedAt := userFields[15].Descriptor()
+	userDescCreatedAt := userFields[16].Descriptor()
 	// user.DefaultCreatedAt holds the default value on creation for the created_at field.
 	user.DefaultCreatedAt = userDescCreatedAt.Default.(func() time.Time)
 	// userDescUpdatedAt is the schema descriptor for updated_at field.
-	userDescUpdatedAt := userFields[16].Descriptor()
+	userDescUpdatedAt := userFields[17].Descriptor()
 	// user.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

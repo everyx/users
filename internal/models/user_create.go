@@ -39,6 +39,20 @@ func (uc *UserCreate) SetPassword(s string) *UserCreate {
 	return uc
 }
 
+// SetAPIKey sets the api_key field.
+func (uc *UserCreate) SetAPIKey(s string) *UserCreate {
+	uc.mutation.SetAPIKey(s)
+	return uc
+}
+
+// SetNillableAPIKey sets the api_key field if the given value is not nil.
+func (uc *UserCreate) SetNillableAPIKey(s *string) *UserCreate {
+	if s != nil {
+		uc.SetAPIKey(*s)
+	}
+	return uc
+}
+
 // SetConfirmed sets the confirmed field.
 func (uc *UserCreate) SetConfirmed(b bool) *UserCreate {
 	uc.mutation.SetConfirmed(b)
@@ -329,6 +343,11 @@ func (uc *UserCreate) check() error {
 			return &ValidationError{Name: "password", err: fmt.Errorf("models: validator failed for field \"password\": %w", err)}
 		}
 	}
+	if v, ok := uc.mutation.APIKey(); ok {
+		if err := user.APIKeyValidator(v); err != nil {
+			return &ValidationError{Name: "api_key", err: fmt.Errorf("models: validator failed for field \"api_key\": %w", err)}
+		}
+	}
 	if v, ok := uc.mutation.ConfirmationToken(); ok {
 		if err := user.ConfirmationTokenValidator(v); err != nil {
 			return &ValidationError{Name: "confirmation_token", err: fmt.Errorf("models: validator failed for field \"confirmation_token\": %w", err)}
@@ -415,6 +434,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Column: user.FieldPassword,
 		})
 		_node.Password = value
+	}
+	if value, ok := uc.mutation.APIKey(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldAPIKey,
+		})
+		_node.APIKey = value
 	}
 	if value, ok := uc.mutation.Confirmed(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

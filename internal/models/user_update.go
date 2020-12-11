@@ -45,6 +45,26 @@ func (uu *UserUpdate) SetPassword(s string) *UserUpdate {
 	return uu
 }
 
+// SetAPIKey sets the api_key field.
+func (uu *UserUpdate) SetAPIKey(s string) *UserUpdate {
+	uu.mutation.SetAPIKey(s)
+	return uu
+}
+
+// SetNillableAPIKey sets the api_key field if the given value is not nil.
+func (uu *UserUpdate) SetNillableAPIKey(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetAPIKey(*s)
+	}
+	return uu
+}
+
+// ClearAPIKey clears the value of api_key.
+func (uu *UserUpdate) ClearAPIKey() *UserUpdate {
+	uu.mutation.ClearAPIKey()
+	return uu
+}
+
 // SetConfirmed sets the confirmed field.
 func (uu *UserUpdate) SetConfirmed(b bool) *UserUpdate {
 	uu.mutation.SetConfirmed(b)
@@ -365,6 +385,11 @@ func (uu *UserUpdate) check() error {
 			return &ValidationError{Name: "password", err: fmt.Errorf("models: validator failed for field \"password\": %w", err)}
 		}
 	}
+	if v, ok := uu.mutation.APIKey(); ok {
+		if err := user.APIKeyValidator(v); err != nil {
+			return &ValidationError{Name: "api_key", err: fmt.Errorf("models: validator failed for field \"api_key\": %w", err)}
+		}
+	}
 	if v, ok := uu.mutation.ConfirmationToken(); ok {
 		if err := user.ConfirmationTokenValidator(v); err != nil {
 			return &ValidationError{Name: "confirmation_token", err: fmt.Errorf("models: validator failed for field \"confirmation_token\": %w", err)}
@@ -430,6 +455,19 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeString,
 			Value:  value,
 			Column: user.FieldPassword,
+		})
+	}
+	if value, ok := uu.mutation.APIKey(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldAPIKey,
+		})
+	}
+	if uu.mutation.APIKeyCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: user.FieldAPIKey,
 		})
 	}
 	if value, ok := uu.mutation.Confirmed(); ok {
@@ -622,6 +660,26 @@ func (uuo *UserUpdateOne) SetEmail(s string) *UserUpdateOne {
 // SetPassword sets the password field.
 func (uuo *UserUpdateOne) SetPassword(s string) *UserUpdateOne {
 	uuo.mutation.SetPassword(s)
+	return uuo
+}
+
+// SetAPIKey sets the api_key field.
+func (uuo *UserUpdateOne) SetAPIKey(s string) *UserUpdateOne {
+	uuo.mutation.SetAPIKey(s)
+	return uuo
+}
+
+// SetNillableAPIKey sets the api_key field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableAPIKey(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetAPIKey(*s)
+	}
+	return uuo
+}
+
+// ClearAPIKey clears the value of api_key.
+func (uuo *UserUpdateOne) ClearAPIKey() *UserUpdateOne {
+	uuo.mutation.ClearAPIKey()
 	return uuo
 }
 
@@ -945,6 +1003,11 @@ func (uuo *UserUpdateOne) check() error {
 			return &ValidationError{Name: "password", err: fmt.Errorf("models: validator failed for field \"password\": %w", err)}
 		}
 	}
+	if v, ok := uuo.mutation.APIKey(); ok {
+		if err := user.APIKeyValidator(v); err != nil {
+			return &ValidationError{Name: "api_key", err: fmt.Errorf("models: validator failed for field \"api_key\": %w", err)}
+		}
+	}
 	if v, ok := uuo.mutation.ConfirmationToken(); ok {
 		if err := user.ConfirmationTokenValidator(v); err != nil {
 			return &ValidationError{Name: "confirmation_token", err: fmt.Errorf("models: validator failed for field \"confirmation_token\": %w", err)}
@@ -1008,6 +1071,19 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Type:   field.TypeString,
 			Value:  value,
 			Column: user.FieldPassword,
+		})
+	}
+	if value, ok := uuo.mutation.APIKey(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldAPIKey,
+		})
+	}
+	if uuo.mutation.APIKeyCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: user.FieldAPIKey,
 		})
 	}
 	if value, ok := uuo.mutation.Confirmed(); ok {

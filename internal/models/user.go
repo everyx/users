@@ -24,6 +24,8 @@ type User struct {
 	Email string `json:"email,omitempty"`
 	// Password holds the value of the "password" field.
 	Password string `json:"-"`
+	// APIKey holds the value of the "api_key" field.
+	APIKey string `json:"-"`
 	// Confirmed holds the value of the "confirmed" field.
 	Confirmed bool `json:"confirmed,omitempty"`
 	// ConfirmationSentAt holds the value of the "confirmation_sent_at" field.
@@ -61,6 +63,7 @@ func (*User) scanValues() []interface{} {
 		&sql.NullString{}, // provider
 		&sql.NullString{}, // email
 		&sql.NullString{}, // password
+		&sql.NullString{}, // api_key
 		&sql.NullBool{},   // confirmed
 		&sql.NullTime{},   // confirmation_sent_at
 		&sql.NullString{}, // confirmation_token
@@ -105,84 +108,89 @@ func (u *User) assignValues(values ...interface{}) error {
 	} else if value.Valid {
 		u.Password = value.String
 	}
-	if value, ok := values[3].(*sql.NullBool); !ok {
-		return fmt.Errorf("unexpected type %T for field confirmed", values[3])
+	if value, ok := values[3].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field api_key", values[3])
+	} else if value.Valid {
+		u.APIKey = value.String
+	}
+	if value, ok := values[4].(*sql.NullBool); !ok {
+		return fmt.Errorf("unexpected type %T for field confirmed", values[4])
 	} else if value.Valid {
 		u.Confirmed = value.Bool
 	}
-	if value, ok := values[4].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field confirmation_sent_at", values[4])
+	if value, ok := values[5].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field confirmation_sent_at", values[5])
 	} else if value.Valid {
 		u.ConfirmationSentAt = new(time.Time)
 		*u.ConfirmationSentAt = value.Time
 	}
-	if value, ok := values[5].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field confirmation_token", values[5])
+	if value, ok := values[6].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field confirmation_token", values[6])
 	} else if value.Valid {
 		u.ConfirmationToken = new(string)
 		*u.ConfirmationToken = value.String
 	}
-	if value, ok := values[6].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field recovery_sent_at", values[6])
+	if value, ok := values[7].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field recovery_sent_at", values[7])
 	} else if value.Valid {
 		u.RecoverySentAt = new(time.Time)
 		*u.RecoverySentAt = value.Time
 	}
-	if value, ok := values[7].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field recovery_token", values[7])
+	if value, ok := values[8].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field recovery_token", values[8])
 	} else if value.Valid {
 		u.RecoveryToken = new(string)
 		*u.RecoveryToken = value.String
 	}
-	if value, ok := values[8].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field otp_sent_at", values[8])
+	if value, ok := values[9].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field otp_sent_at", values[9])
 	} else if value.Valid {
 		u.OtpSentAt = new(time.Time)
 		*u.OtpSentAt = value.Time
 	}
-	if value, ok := values[9].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field otp", values[9])
+	if value, ok := values[10].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field otp", values[10])
 	} else if value.Valid {
 		u.Otp = new(string)
 		*u.Otp = value.String
 	}
-	if value, ok := values[10].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field email_change", values[10])
+	if value, ok := values[11].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field email_change", values[11])
 	} else if value.Valid {
 		u.EmailChange = value.String
 	}
-	if value, ok := values[11].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field email_change_sent_at", values[11])
+	if value, ok := values[12].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field email_change_sent_at", values[12])
 	} else if value.Valid {
 		u.EmailChangeSentAt = new(time.Time)
 		*u.EmailChangeSentAt = value.Time
 	}
-	if value, ok := values[12].(*sql.NullString); !ok {
-		return fmt.Errorf("unexpected type %T for field email_change_token", values[12])
+	if value, ok := values[13].(*sql.NullString); !ok {
+		return fmt.Errorf("unexpected type %T for field email_change_token", values[13])
 	} else if value.Valid {
 		u.EmailChangeToken = new(string)
 		*u.EmailChangeToken = value.String
 	}
 
-	if value, ok := values[13].(*[]byte); !ok {
-		return fmt.Errorf("unexpected type %T for field metadata", values[13])
+	if value, ok := values[14].(*[]byte); !ok {
+		return fmt.Errorf("unexpected type %T for field metadata", values[14])
 	} else if value != nil && len(*value) > 0 {
 		if err := json.Unmarshal(*value, &u.Metadata); err != nil {
 			return fmt.Errorf("unmarshal field metadata: %v", err)
 		}
 	}
-	if value, ok := values[14].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field created_at", values[14])
+	if value, ok := values[15].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field created_at", values[15])
 	} else if value.Valid {
 		u.CreatedAt = value.Time
 	}
-	if value, ok := values[15].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field updated_at", values[15])
+	if value, ok := values[16].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field updated_at", values[16])
 	} else if value.Valid {
 		u.UpdatedAt = value.Time
 	}
-	if value, ok := values[16].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field last_signin_at", values[16])
+	if value, ok := values[17].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field last_signin_at", values[17])
 	} else if value.Valid {
 		u.LastSigninAt = new(time.Time)
 		*u.LastSigninAt = value.Time
@@ -218,6 +226,7 @@ func (u *User) String() string {
 	builder.WriteString(", email=")
 	builder.WriteString(u.Email)
 	builder.WriteString(", password=<sensitive>")
+	builder.WriteString(", api_key=<sensitive>")
 	builder.WriteString(", confirmed=")
 	builder.WriteString(fmt.Sprintf("%v", u.Confirmed))
 	if v := u.ConfirmationSentAt; v != nil {

@@ -22,20 +22,24 @@ const defaultPath = "/"
 type UserStore interface {
 	// Create, Delete
 	New(email, password, provider string, meta map[string]interface{}) (string, error)
-	UserData(id string) (string, map[string]interface{}, error)
+	UserData(id string) (string, string, map[string]interface{}, error)
 	UserIDByEmail(email string) (string, error)
 	UserIDByConfirmationToken(token string) (string, error)
 	UserIDByRecoveryToken(token string) (string, error)
 	UserIDByEmailChangeToken(token string) (string, error)
 	UserIDByOTP(token string) (string, error)
+	UserIDByAPIKey(apiKey string) (string, error)
 	DeleteUser(id string) error
 
 	GetPassword(id string) (string, error)
+	GetAPIKey(id string) (string, error)
 	GetEmailChange(id string) (string, error)
 	IsEmailConfirmed(id string) (bool, error)
 
 	// Update Password
 	UpdatePassword(id, password string) error
+	// Update API Key
+	UpdateAPIKey(id, apiKey string) error
 	// Update Email
 	UpdateEmail(id, email string) error
 	UpdateProvider(id, provider string) error

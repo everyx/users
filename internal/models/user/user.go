@@ -19,6 +19,8 @@ const (
 	FieldEmail = "email"
 	// FieldPassword holds the string denoting the password field in the database.
 	FieldPassword = "password"
+	// FieldAPIKey holds the string denoting the api_key field in the database.
+	FieldAPIKey = "api_key"
 	// FieldConfirmed holds the string denoting the confirmed field in the database.
 	FieldConfirmed = "confirmed"
 	// FieldConfirmationSentAt holds the string denoting the confirmation_sent_at field in the database.
@@ -58,6 +60,7 @@ var Columns = []string{
 	FieldProvider,
 	FieldEmail,
 	FieldPassword,
+	FieldAPIKey,
 	FieldConfirmed,
 	FieldConfirmationSentAt,
 	FieldConfirmationToken,
@@ -91,6 +94,8 @@ var (
 	EmailValidator func(string) error
 	// PasswordValidator is a validator for the "password" field. It is called by the builders before save.
 	PasswordValidator func(string) error
+	// APIKeyValidator is a validator for the "api_key" field. It is called by the builders before save.
+	APIKeyValidator func(string) error
 	// DefaultConfirmed holds the default value on creation for the confirmed field.
 	DefaultConfirmed bool
 	// ConfirmationTokenValidator is a validator for the "confirmation_token" field. It is called by the builders before save.
