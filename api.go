@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hako/branca"
+
 	"github.com/lithammer/shortuuid/v3"
 
 	"github.com/fatih/structs"
@@ -27,11 +29,19 @@ const (
 )
 
 type Config struct {
-	Driver        string
-	Datasource    string
-	SessionSecret string
-	SendMail      SendMailFunc
-	GothProviders []goth.Provider
+	Driver          string
+	Datasource      string
+	SessionSecret   string
+	SendMail        SendMailFunc
+	APIMasterSecret string
+	GothProviders   []goth.Provider
+}
+
+type User struct {
+	ID            string                 `json:"id"`
+	Email         string                 `json:"email"`
+	IsAPITokenSet bool                   `json:"is_api_token_set"`
+	Metadata      map[string]interface{} `json:"metadata"`
 }
 
 func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
@@ -54,15 +64,17 @@ func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
 		userStore:    userStore,
 		sessionStore: sessionStore,
 		sendMail:     cfg.SendMail,
+		branca:       branca.NewBranca(cfg.APIMasterSecret),
 	}, nil
 }
 
-func NewAPI(ctx context.Context, userStore UserStore, sessionStore SessionsStore, sendMail SendMailFunc) *API {
+func NewAPI(ctx context.Context, apiMasterSecret string, userStore UserStore, sessionStore SessionsStore, sendMail SendMailFunc) *API {
 	return &API{
 		ctx:          ctx,
 		userStore:    userStore,
 		sessionStore: sessionStore,
 		sendMail:     sendMail,
+		branca:       branca.NewBranca(apiMasterSecret),
 	}
 }
 
@@ -71,6 +83,7 @@ type API struct {
 	userStore    UserStore
 	sessionStore SessionsStore
 	sendMail     SendMailFunc
+	branca       *branca.Branca
 }
 
 // hashPassword generates a hashed password from a plaintext string
@@ -79,6 +92,7 @@ func hashPassword(password string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(pw), nil
 }
 
@@ -198,7 +212,49 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (a *API) IsAuthenticated(next http.Handler) http.Handler {
+func (a *API) IsAuthenticatedByBearer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		contentType := r.Header.Get("Content-type")
+		if contentType == "" {
+			contentType = formContentType
+		}
+
+		authHeader := r.Header.Get("Authorization")
+
+		if contentType != jsonContentType || !strings.Contains(authHeader, "Bearer") {
+			http.Error(w, "Unauthorized: invalid bearer token or contentType is not application/json", 401)
+			return
+		}
+
+		parts := strings.Split(authHeader, "Bearer ")
+		if len(parts) != 2 {
+			http.Error(w, "Unauthorized: invalid header", 401)
+			return
+		}
+
+		apiKey, err := a.branca.DecodeToString(parts[1])
+		if err != nil {
+			fmt.Println(err)
+			http.Error(w, "Unauthorized: invalid bearer token", 401)
+			return
+		}
+
+		id, err := a.userStore.UserIDByAPIKey(apiKey)
+		if id == "" || err != nil {
+			fmt.Println(err)
+			http.Error(w, "Unauthorized: user not found", 401)
+			return
+		}
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxUserIdKey, id)
+		next.ServeHTTP(w, r.WithContext(ctx))
+		return
+
+	})
+}
+
+func (a *API) IsAuthenticatedByLogin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 		if contentType == "" {
@@ -210,19 +266,14 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 		if contentType == jsonContentType && strings.Contains(authHeader, "Bearer") {
 			parts := strings.Split(authHeader, "Bearer ")
 			if len(parts) != 2 {
-				http.Error(w, "Unauthorized", 401)
+				http.Error(w, "Unauthorized: invalid header", 401)
 				return
 			}
 
-			hashedAPIKey, err := hashPassword(parts[1])
-			if err != nil {
-				http.Error(w, "Unauthorized: internal error", 401)
-				return
-			}
-
-			id, err := a.userStore.UserIDByAPIKey(hashedAPIKey)
+			id, err := a.userStore.UserIDByAPIKey(parts[1])
 			if id == "" || err != nil {
-				http.Error(w, "Unauthorized", 401)
+				fmt.Println(err)
+				http.Error(w, "Unauthorized: user not found", 401)
 				return
 			}
 
@@ -267,28 +318,40 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 	})
 }
 
-func (a *API) LoggedInUser(r *http.Request) (string, string, string, map[string]interface{}, error) {
+func (a *API) LoggedInUser(r *http.Request) (*User, error) {
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
-		return "", "", "", nil, fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
+		return nil, fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
 	}
 
 	id, ok := session.Values["id"]
 	if !ok {
-		return "", "", "", nil, fmt.Errorf("%w", ErrUserNotLoggedIn)
+		return nil, fmt.Errorf("%w", ErrUserNotLoggedIn)
 	}
 
 	userID, ok := id.(string)
 	if !ok {
-		return "", "", "", nil, fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
+		return nil, fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
 	}
 
 	email, apiKey, metadata, err := a.userStore.UserData(userID)
 	if err != nil {
-		return "", "", "", nil, fmt.Errorf("%v, %w", err, ErrUserNotLoggedIn)
+		return nil, fmt.Errorf("%v, %w", err, ErrUserNotLoggedIn)
 	}
 
-	return userID, email, apiKey, metadata, nil
+	isAPIKeySet := false
+	if apiKey != "" {
+		isAPIKeySet = true
+	}
+
+	user := &User{
+		ID:            userID,
+		Email:         email,
+		IsAPITokenSet: isAPIKeySet,
+		Metadata:      metadata,
+	}
+
+	return user, nil
 }
 
 func (a *API) ConfirmEmail(token string) error {
@@ -456,7 +519,7 @@ func (a *API) OTP(email string) error {
 	return nil
 }
 
-func (a *API) ResetAPIKey(r *http.Request) (string, error) {
+func (a *API) ResetAPIToken(r *http.Request) (string, error) {
 
 	session, err := a.sessionStore.Get(r, "auth-session")
 	if err != nil {
@@ -473,17 +536,18 @@ func (a *API) ResetAPIKey(r *http.Request) (string, error) {
 		return "", fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
 	}
 	apiKey := shortuuid.New()
-	hashedAPIKey, err := hashPassword(apiKey)
+
+	token, err := a.branca.EncodeToString(apiKey)
 	if err != nil {
 		return "", fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	err = a.userStore.UpdateAPIKey(userID, hashedAPIKey)
+	err = a.userStore.UpdateAPIKey(userID, apiKey)
 	if err != nil {
 		return "", fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	return apiKey, nil
+	return token, nil
 }
 
 func (a *API) LoginWithOTP(w http.ResponseWriter, r *http.Request, otp string) error {
@@ -640,4 +704,48 @@ func (a *API) DeleteUser(r *http.Request) error {
 		return fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
 	}
 	return a.userStore.DeleteUser(userID)
+}
+
+func (a *API) GetSessionVal(r *http.Request, key string) (interface{}, error) {
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return nil, fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	val, ok := session.Values[key]
+	if !ok {
+		return nil, fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	return val, nil
+}
+
+func (a *API) SetSessionVal(r *http.Request, w http.ResponseWriter, key string, val interface{}) error {
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	session.Values[key] = val
+	err = session.Save(r, w)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	return nil
+}
+
+func (a *API) DelSessionVal(r *http.Request, w http.ResponseWriter, key string) error {
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return fmt.Errorf("err: %v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	session.Values[key] = nil
+	err = session.Save(r, w)
+	if err != nil {
+		return fmt.Errorf("%v %w", err, ErrInternal)
+	}
+
+	return nil
 }

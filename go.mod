@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
+	github.com/hako/branca v0.0.0-20200807062402-6052ac720505 // indirect
 	github.com/lib/pq v1.8.0
 	github.com/lithammer/shortuuid/v3 v3.0.5 // indirect
 	github.com/markbates/goth v1.66.0 // indirect
