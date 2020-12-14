@@ -212,49 +212,7 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (a *API) IsAuthenticatedByBearer(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		contentType := r.Header.Get("Content-type")
-		if contentType == "" {
-			contentType = formContentType
-		}
-
-		authHeader := r.Header.Get("Authorization")
-
-		if contentType != jsonContentType || !strings.Contains(authHeader, "Bearer") {
-			http.Error(w, "Unauthorized: invalid bearer token or contentType is not application/json", 401)
-			return
-		}
-
-		parts := strings.Split(authHeader, "Bearer ")
-		if len(parts) != 2 {
-			http.Error(w, "Unauthorized: invalid header", 401)
-			return
-		}
-
-		apiKey, err := a.branca.DecodeToString(parts[1])
-		if err != nil {
-			fmt.Println(err)
-			http.Error(w, "Unauthorized: invalid bearer token", 401)
-			return
-		}
-
-		id, err := a.userStore.UserIDByAPIKey(apiKey)
-		if id == "" || err != nil {
-			fmt.Println(err)
-			http.Error(w, "Unauthorized: user not found", 401)
-			return
-		}
-
-		ctx := r.Context()
-		ctx = context.WithValue(ctx, ctxUserIdKey, id)
-		next.ServeHTTP(w, r.WithContext(ctx))
-		return
-
-	})
-}
-
-func (a *API) IsAuthenticatedByLogin(next http.Handler) http.Handler {
+func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 		if contentType == "" {
@@ -270,7 +228,14 @@ func (a *API) IsAuthenticatedByLogin(next http.Handler) http.Handler {
 				return
 			}
 
-			id, err := a.userStore.UserIDByAPIKey(parts[1])
+			apiKey, err := a.branca.DecodeToString(parts[1])
+			if err != nil {
+				fmt.Println(err)
+				http.Error(w, "Unauthorized: invalid bearer token", 401)
+				return
+			}
+
+			id, err := a.userStore.UserIDByAPIKey(apiKey)
 			if id == "" || err != nil {
 				fmt.Println(err)
 				http.Error(w, "Unauthorized: user not found", 401)
