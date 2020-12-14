@@ -29,7 +29,7 @@ func isEmailValid(e string) bool {
 type MailType int
 
 const (
-	Confirmation = iota
+	Confirmation MailType = iota
 	Recovery
 	ChangeEmail
 	OTP
