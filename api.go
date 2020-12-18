@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -655,6 +656,21 @@ func (a *API) GetSessionVal(r *http.Request, key string) (interface{}, error) {
 	}
 
 	return val, nil
+}
+
+func (a *API) GetSessionStringVal(r *http.Request, key string) *string {
+	val, err := a.GetSessionVal(r, key)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	strVal, ok := val.(string)
+	if !ok {
+		log.Printf("err %v is not string", val)
+		return nil
+	}
+
+	return &strVal
 }
 
 func (a *API) SetSessionVal(r *http.Request, w http.ResponseWriter, key string, val interface{}) error {
