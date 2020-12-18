@@ -21,7 +21,6 @@ type SessionQuery struct {
 	limit      *int
 	offset     *int
 	order      []OrderFunc
-	unique     []string
 	predicates []predicate.Session
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -226,7 +225,6 @@ func (sq *SessionQuery) Clone() *SessionQuery {
 		limit:      sq.limit,
 		offset:     sq.offset,
 		order:      append([]OrderFunc{}, sq.order...),
-		unique:     append([]string{}, sq.unique...),
 		predicates: append([]predicate.Session{}, sq.predicates...),
 		// clone intermediate query.
 		sql:  sq.sql.Clone(),

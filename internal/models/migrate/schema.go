@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"github.com/facebook/ent/dialect/entsql"
 	"github.com/facebook/ent/dialect/sql/schema"
 	"github.com/facebook/ent/schema/field"
 )
@@ -22,10 +23,12 @@ var (
 		Columns:     SessionsxColumns,
 		PrimaryKey:  []*schema.Column{SessionsxColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{},
+		Annotation:  &entsql.Annotation{Table: "sessionsx"},
 	}
 	// UsersxColumns holds the columns for the "usersx" table.
 	UsersxColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "billing_id", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "provider", Type: field.TypeString},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "password", Type: field.TypeString},
@@ -51,6 +54,7 @@ var (
 		Columns:     UsersxColumns,
 		PrimaryKey:  []*schema.Column{UsersxColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{},
+		Annotation:  &entsql.Annotation{Table: "usersx"},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{

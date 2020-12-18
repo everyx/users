@@ -22,7 +22,6 @@ type UserQuery struct {
 	limit      *int
 	offset     *int
 	order      []OrderFunc
-	unique     []string
 	predicates []predicate.User
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -227,7 +226,6 @@ func (uq *UserQuery) Clone() *UserQuery {
 		limit:      uq.limit,
 		offset:     uq.offset,
 		order:      append([]OrderFunc{}, uq.order...),
-		unique:     append([]string{}, uq.unique...),
 		predicates: append([]predicate.User{}, uq.predicates...),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
@@ -241,12 +239,12 @@ func (uq *UserQuery) Clone() *UserQuery {
 // Example:
 //
 //	var v []struct {
-//		Provider string `json:"provider,omitempty"`
+//		BillingID string `json:"billing_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.User.Query().
-//		GroupBy(user.FieldProvider).
+//		GroupBy(user.FieldBillingID).
 //		Aggregate(models.Count()).
 //		Scan(ctx, &v)
 //
@@ -267,11 +265,11 @@ func (uq *UserQuery) GroupBy(field string, fields ...string) *UserGroupBy {
 // Example:
 //
 //	var v []struct {
-//		Provider string `json:"provider,omitempty"`
+//		BillingID string `json:"billing_id,omitempty"`
 //	}
 //
 //	client.User.Query().
-//		Select(user.FieldProvider).
+//		Select(user.FieldBillingID).
 //		Scan(ctx, &v)
 //
 func (uq *UserQuery) Select(field string, fields ...string) *UserSelect {

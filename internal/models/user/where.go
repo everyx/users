@@ -93,6 +93,13 @@ func IDLTE(id uuid.UUID) predicate.User {
 	})
 }
 
+// BillingID applies equality check predicate on the "billing_id" field. It's identical to BillingIDEQ.
+func BillingID(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldBillingID), v))
+	})
+}
+
 // Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
 func Provider(v string) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
@@ -209,6 +216,131 @@ func UpdatedAt(v time.Time) predicate.User {
 func LastSigninAt(v time.Time) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldLastSigninAt), v))
+	})
+}
+
+// BillingIDEQ applies the EQ predicate on the "billing_id" field.
+func BillingIDEQ(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDNEQ applies the NEQ predicate on the "billing_id" field.
+func BillingIDNEQ(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDIn applies the In predicate on the "billing_id" field.
+func BillingIDIn(vs ...string) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldBillingID), v...))
+	})
+}
+
+// BillingIDNotIn applies the NotIn predicate on the "billing_id" field.
+func BillingIDNotIn(vs ...string) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldBillingID), v...))
+	})
+}
+
+// BillingIDGT applies the GT predicate on the "billing_id" field.
+func BillingIDGT(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDGTE applies the GTE predicate on the "billing_id" field.
+func BillingIDGTE(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDLT applies the LT predicate on the "billing_id" field.
+func BillingIDLT(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDLTE applies the LTE predicate on the "billing_id" field.
+func BillingIDLTE(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDContains applies the Contains predicate on the "billing_id" field.
+func BillingIDContains(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDHasPrefix applies the HasPrefix predicate on the "billing_id" field.
+func BillingIDHasPrefix(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDHasSuffix applies the HasSuffix predicate on the "billing_id" field.
+func BillingIDHasSuffix(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDIsNil applies the IsNil predicate on the "billing_id" field.
+func BillingIDIsNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldBillingID)))
+	})
+}
+
+// BillingIDNotNil applies the NotNil predicate on the "billing_id" field.
+func BillingIDNotNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldBillingID)))
+	})
+}
+
+// BillingIDEqualFold applies the EqualFold predicate on the "billing_id" field.
+func BillingIDEqualFold(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldBillingID), v))
+	})
+}
+
+// BillingIDContainsFold applies the ContainsFold predicate on the "billing_id" field.
+func BillingIDContainsFold(v string) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldBillingID), v))
 	})
 }
 

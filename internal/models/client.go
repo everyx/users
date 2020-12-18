@@ -146,7 +146,7 @@ func (c *SessionClient) Create() *SessionCreate {
 	return &SessionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// BulkCreate returns a builder for creating a bulk of Session entities.
+// CreateBulk returns a builder for creating a bulk of Session entities.
 func (c *SessionClient) CreateBulk(builders ...*SessionCreate) *SessionCreateBulk {
 	return &SessionCreateBulk{config: c.config, builders: builders}
 }
@@ -234,7 +234,7 @@ func (c *UserClient) Create() *UserCreate {
 	return &UserCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// BulkCreate returns a builder for creating a bulk of User entities.
+// CreateBulk returns a builder for creating a bulk of User entities.
 func (c *UserClient) CreateBulk(builders ...*UserCreate) *UserCreateBulk {
 	return &UserCreateBulk{config: c.config, builders: builders}
 }

@@ -21,6 +21,20 @@ type UserCreate struct {
 	hooks    []Hook
 }
 
+// SetBillingID sets the billing_id field.
+func (uc *UserCreate) SetBillingID(s string) *UserCreate {
+	uc.mutation.SetBillingID(s)
+	return uc
+}
+
+// SetNillableBillingID sets the billing_id field if the given value is not nil.
+func (uc *UserCreate) SetNillableBillingID(s *string) *UserCreate {
+	if s != nil {
+		uc.SetBillingID(*s)
+	}
+	return uc
+}
+
 // SetProvider sets the provider field.
 func (uc *UserCreate) SetProvider(s string) *UserCreate {
 	uc.mutation.SetProvider(s)
@@ -319,6 +333,11 @@ func (uc *UserCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (uc *UserCreate) check() error {
+	if v, ok := uc.mutation.BillingID(); ok {
+		if err := user.BillingIDValidator(v); err != nil {
+			return &ValidationError{Name: "billing_id", err: fmt.Errorf("models: validator failed for field \"billing_id\": %w", err)}
+		}
+	}
 	if _, ok := uc.mutation.Provider(); !ok {
 		return &ValidationError{Name: "provider", err: errors.New("models: missing required field \"provider\"")}
 	}
@@ -410,6 +429,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if id, ok := uc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
+	}
+	if value, ok := uc.mutation.BillingID(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldBillingID,
+		})
+		_node.BillingID = value
 	}
 	if value, ok := uc.mutation.Provider(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{

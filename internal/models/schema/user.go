@@ -27,6 +27,7 @@ func (User) Annotations() []schema.Annotation {
 func (User) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
+		field.String("billing_id").NotEmpty().Unique().Optional(),
 		field.String("provider").NotEmpty(),
 		field.String("email").Unique().NotEmpty(),
 		field.String("password").NotEmpty().Sensitive().MinLen(8),

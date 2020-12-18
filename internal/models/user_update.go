@@ -27,6 +27,26 @@ func (uu *UserUpdate) Where(ps ...predicate.User) *UserUpdate {
 	return uu
 }
 
+// SetBillingID sets the billing_id field.
+func (uu *UserUpdate) SetBillingID(s string) *UserUpdate {
+	uu.mutation.SetBillingID(s)
+	return uu
+}
+
+// SetNillableBillingID sets the billing_id field if the given value is not nil.
+func (uu *UserUpdate) SetNillableBillingID(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetBillingID(*s)
+	}
+	return uu
+}
+
+// ClearBillingID clears the value of billing_id.
+func (uu *UserUpdate) ClearBillingID() *UserUpdate {
+	uu.mutation.ClearBillingID()
+	return uu
+}
+
 // SetProvider sets the provider field.
 func (uu *UserUpdate) SetProvider(s string) *UserUpdate {
 	uu.mutation.SetProvider(s)
@@ -302,7 +322,7 @@ func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
 }
 
-// Save executes the query and returns the number of rows/vertices matched by this operation.
+// Save executes the query and returns the number of nodes affected by the update operation.
 func (uu *UserUpdate) Save(ctx context.Context) (int, error) {
 	var (
 		err      error
@@ -370,6 +390,11 @@ func (uu *UserUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (uu *UserUpdate) check() error {
+	if v, ok := uu.mutation.BillingID(); ok {
+		if err := user.BillingIDValidator(v); err != nil {
+			return &ValidationError{Name: "billing_id", err: fmt.Errorf("models: validator failed for field \"billing_id\": %w", err)}
+		}
+	}
 	if v, ok := uu.mutation.Provider(); ok {
 		if err := user.ProviderValidator(v); err != nil {
 			return &ValidationError{Name: "provider", err: fmt.Errorf("models: validator failed for field \"provider\": %w", err)}
@@ -435,6 +460,19 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := uu.mutation.BillingID(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldBillingID,
+		})
+	}
+	if uu.mutation.BillingIDCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: user.FieldBillingID,
+		})
 	}
 	if value, ok := uu.mutation.Provider(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
@@ -643,6 +681,26 @@ type UserUpdateOne struct {
 	config
 	hooks    []Hook
 	mutation *UserMutation
+}
+
+// SetBillingID sets the billing_id field.
+func (uuo *UserUpdateOne) SetBillingID(s string) *UserUpdateOne {
+	uuo.mutation.SetBillingID(s)
+	return uuo
+}
+
+// SetNillableBillingID sets the billing_id field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableBillingID(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetBillingID(*s)
+	}
+	return uuo
+}
+
+// ClearBillingID clears the value of billing_id.
+func (uuo *UserUpdateOne) ClearBillingID() *UserUpdateOne {
+	uuo.mutation.ClearBillingID()
+	return uuo
 }
 
 // SetProvider sets the provider field.
@@ -988,6 +1046,11 @@ func (uuo *UserUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (uuo *UserUpdateOne) check() error {
+	if v, ok := uuo.mutation.BillingID(); ok {
+		if err := user.BillingIDValidator(v); err != nil {
+			return &ValidationError{Name: "billing_id", err: fmt.Errorf("models: validator failed for field \"billing_id\": %w", err)}
+		}
+	}
 	if v, ok := uuo.mutation.Provider(); ok {
 		if err := user.ProviderValidator(v); err != nil {
 			return &ValidationError{Name: "provider", err: fmt.Errorf("models: validator failed for field \"provider\": %w", err)}
@@ -1052,6 +1115,19 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		return nil, &ValidationError{Name: "ID", err: fmt.Errorf("missing User.ID for update")}
 	}
 	_spec.Node.ID.Value = id
+	if value, ok := uuo.mutation.BillingID(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: user.FieldBillingID,
+		})
+	}
+	if uuo.mutation.BillingIDCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Column: user.FieldBillingID,
+		})
+	}
 	if value, ok := uuo.mutation.Provider(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,

@@ -13,6 +13,8 @@ const (
 	Label = "user"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldBillingID holds the string denoting the billing_id field in the database.
+	FieldBillingID = "billing_id"
 	// FieldProvider holds the string denoting the provider field in the database.
 	FieldProvider = "provider"
 	// FieldEmail holds the string denoting the email field in the database.
@@ -57,6 +59,7 @@ const (
 // Columns holds all SQL columns for user fields.
 var Columns = []string{
 	FieldID,
+	FieldBillingID,
 	FieldProvider,
 	FieldEmail,
 	FieldPassword,
@@ -88,6 +91,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// BillingIDValidator is a validator for the "billing_id" field. It is called by the builders before save.
+	BillingIDValidator func(string) error
 	// ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
 	ProviderValidator func(string) error
 	// EmailValidator is a validator for the "email" field. It is called by the builders before save.

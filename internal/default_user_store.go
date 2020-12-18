@@ -45,13 +45,13 @@ func (d *DefaultUserStore) New(email, password, provider string, meta map[string
 	return usr.ID.String(), nil
 }
 
-func (d *DefaultUserStore) UserData(id string) (string, string, map[string]interface{}, error) {
+func (d *DefaultUserStore) UserData(id string) (string, string, string, map[string]interface{}, error) {
 	usr, err := d.getUser(id)
 	if err != nil {
-		return "", "", nil, err
+		return "", "", "", nil, err
 	}
 
-	return usr.Email, usr.APIKey, usr.Metadata, nil
+	return usr.Email, usr.BillingID, usr.APIKey, usr.Metadata, nil
 }
 
 func (d *DefaultUserStore) UserIDByEmail(email string) (string, error) {
@@ -170,6 +170,19 @@ func (d *DefaultUserStore) UpdateAPIKey(id, apiKey string) error {
 		return err
 	}
 	_, err = u.SetAPIKey(apiKey).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DefaultUserStore) UpdateBillingID(id, billingID string) error {
+	u, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = u.SetBillingID(billingID).Save(d.Ctx)
 	if err != nil {
 		return err
 	}

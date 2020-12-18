@@ -51,7 +51,7 @@ var _ ent.Mutation = (*SessionMutation)(nil)
 // sessionOption allows to manage the mutation configuration using functional options.
 type sessionOption func(*SessionMutation)
 
-// newSessionMutation creates new mutation for $n.Name.
+// newSessionMutation creates new mutation for Session.
 func newSessionMutation(c config, op Op, opts ...sessionOption) *SessionMutation {
 	m := &SessionMutation{
 		config:        c,
@@ -523,6 +523,7 @@ type UserMutation struct {
 	op                   Op
 	typ                  string
 	id                   *uuid.UUID
+	billing_id           *string
 	provider             *string
 	email                *string
 	password             *string
@@ -552,7 +553,7 @@ var _ ent.Mutation = (*UserMutation)(nil)
 // userOption allows to manage the mutation configuration using functional options.
 type userOption func(*UserMutation)
 
-// newUserMutation creates new mutation for $n.Name.
+// newUserMutation creates new mutation for User.
 func newUserMutation(c config, op Op, opts ...userOption) *UserMutation {
 	m := &UserMutation{
 		config:        c,
@@ -630,6 +631,56 @@ func (m *UserMutation) ID() (id uuid.UUID, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// SetBillingID sets the billing_id field.
+func (m *UserMutation) SetBillingID(s string) {
+	m.billing_id = &s
+}
+
+// BillingID returns the billing_id value in the mutation.
+func (m *UserMutation) BillingID() (r string, exists bool) {
+	v := m.billing_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBillingID returns the old billing_id value of the User.
+// If the User object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *UserMutation) OldBillingID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldBillingID is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldBillingID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillingID: %w", err)
+	}
+	return oldValue.BillingID, nil
+}
+
+// ClearBillingID clears the value of billing_id.
+func (m *UserMutation) ClearBillingID() {
+	m.billing_id = nil
+	m.clearedFields[user.FieldBillingID] = struct{}{}
+}
+
+// BillingIDCleared returns if the field billing_id was cleared in this mutation.
+func (m *UserMutation) BillingIDCleared() bool {
+	_, ok := m.clearedFields[user.FieldBillingID]
+	return ok
+}
+
+// ResetBillingID reset all changes of the "billing_id" field.
+func (m *UserMutation) ResetBillingID() {
+	m.billing_id = nil
+	delete(m.clearedFields, user.FieldBillingID)
 }
 
 // SetProvider sets the provider field.
@@ -1468,7 +1519,10 @@ func (m *UserMutation) Type() string {
 // this mutation. Note that, in order to get all numeric
 // fields that were in/decremented, call AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
+	if m.billing_id != nil {
+		fields = append(fields, user.FieldBillingID)
+	}
 	if m.provider != nil {
 		fields = append(fields, user.FieldProvider)
 	}
@@ -1531,6 +1585,8 @@ func (m *UserMutation) Fields() []string {
 // not set, or was not define in the schema.
 func (m *UserMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case user.FieldBillingID:
+		return m.BillingID()
 	case user.FieldProvider:
 		return m.Provider()
 	case user.FieldEmail:
@@ -1576,6 +1632,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 // or the query to the database was failed.
 func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case user.FieldBillingID:
+		return m.OldBillingID(ctx)
 	case user.FieldProvider:
 		return m.OldProvider(ctx)
 	case user.FieldEmail:
@@ -1621,6 +1679,13 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type mismatch the field type.
 func (m *UserMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case user.FieldBillingID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBillingID(v)
+		return nil
 	case user.FieldProvider:
 		v, ok := value.(string)
 		if !ok {
@@ -1777,6 +1842,9 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 // during this mutation.
 func (m *UserMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(user.FieldBillingID) {
+		fields = append(fields, user.FieldBillingID)
+	}
 	if m.FieldCleared(user.FieldAPIKey) {
 		fields = append(fields, user.FieldAPIKey)
 	}
@@ -1827,6 +1895,9 @@ func (m *UserMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UserMutation) ClearField(name string) error {
 	switch name {
+	case user.FieldBillingID:
+		m.ClearBillingID()
+		return nil
 	case user.FieldAPIKey:
 		m.ClearAPIKey()
 		return nil
@@ -1872,6 +1943,9 @@ func (m *UserMutation) ClearField(name string) error {
 // defined in the schema.
 func (m *UserMutation) ResetField(name string) error {
 	switch name {
+	case user.FieldBillingID:
+		m.ResetBillingID()
+		return nil
 	case user.FieldProvider:
 		m.ResetProvider()
 		return nil

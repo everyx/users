@@ -64,7 +64,7 @@ func (su *SessionUpdate) Mutation() *SessionMutation {
 	return su.mutation
 }
 
-// Save executes the query and returns the number of rows/vertices matched by this operation.
+// Save executes the query and returns the number of nodes affected by the update operation.
 func (su *SessionUpdate) Save(ctx context.Context) (int, error) {
 	var (
 		err      error

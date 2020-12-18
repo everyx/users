@@ -39,6 +39,7 @@ type Config struct {
 
 type User struct {
 	ID            string                 `json:"id"`
+	BillingID     string                 `json:"billing_id"`
 	Email         string                 `json:"email"`
 	IsAPITokenSet bool                   `json:"is_api_token_set"`
 	Metadata      map[string]interface{} `json:"metadata"`
@@ -284,22 +285,12 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 }
 
 func (a *API) LoggedInUser(r *http.Request) (*User, error) {
-	session, err := a.sessionStore.Get(r, "auth-session")
+	userID, err := a.getUserIDFromSession(r)
 	if err != nil {
-		return nil, fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
+		return nil, err
 	}
 
-	id, ok := session.Values["id"]
-	if !ok {
-		return nil, fmt.Errorf("%w", ErrUserNotLoggedIn)
-	}
-
-	userID, ok := id.(string)
-	if !ok {
-		return nil, fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
-	}
-
-	email, apiKey, metadata, err := a.userStore.UserData(userID)
+	email, billingID, apiKey, metadata, err := a.userStore.UserData(userID)
 	if err != nil {
 		return nil, fmt.Errorf("%v, %w", err, ErrUserNotLoggedIn)
 	}
@@ -311,6 +302,7 @@ func (a *API) LoggedInUser(r *http.Request) (*User, error) {
 
 	user := &User{
 		ID:            userID,
+		BillingID:     billingID,
 		Email:         email,
 		IsAPITokenSet: isAPIKeySet,
 		Metadata:      metadata,
@@ -342,7 +334,7 @@ func (a *API) ChangeEmail(id, newEmail string) error {
 		return fmt.Errorf("%w", ErrInvalidEmail)
 	}
 
-	email, _, metadata, err := a.userStore.UserData(id)
+	email, _, _, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		return fmt.Errorf("%w", ErrInternal)
 	}
@@ -407,7 +399,7 @@ func (a *API) Recovery(email string) error {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	_, _, metadata, err := a.userStore.UserData(id)
+	_, _, _, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -466,7 +458,7 @@ func (a *API) OTP(email string) error {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
 
-	_, _, metadata, err := a.userStore.UserData(id)
+	_, _, _, metadata, err := a.userStore.UserData(id)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -486,19 +478,9 @@ func (a *API) OTP(email string) error {
 
 func (a *API) ResetAPIToken(r *http.Request) (string, error) {
 
-	session, err := a.sessionStore.Get(r, "auth-session")
+	userID, err := a.getUserIDFromSession(r)
 	if err != nil {
-		return "", fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
-	}
-
-	id, ok := session.Values["id"]
-	if !ok {
-		return "", fmt.Errorf("%w", ErrUserNotLoggedIn)
-	}
-
-	userID, ok := id.(string)
-	if !ok {
-		return "", fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
+		return "", err
 	}
 	apiKey := shortuuid.New()
 
@@ -654,19 +636,9 @@ func (a *API) HandleGothLogout(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *API) DeleteUser(r *http.Request) error {
-	session, err := a.sessionStore.Get(r, "auth-session")
+	userID, err := a.getUserIDFromSession(r)
 	if err != nil {
-		return fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
-	}
-
-	id, ok := session.Values["id"]
-	if !ok {
-		return fmt.Errorf("%w", ErrUserNotLoggedIn)
-	}
-
-	userID, ok := id.(string)
-	if !ok {
-		return fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
+		return err
 	}
 	return a.userStore.DeleteUser(userID)
 }
@@ -713,4 +685,30 @@ func (a *API) DelSessionVal(r *http.Request, w http.ResponseWriter, key string) 
 	}
 
 	return nil
+}
+
+func (a *API) getUserIDFromSession(r *http.Request) (string, error) {
+	session, err := a.sessionStore.Get(r, "auth-session")
+	if err != nil {
+		return "", fmt.Errorf("%v, %w", err, ErrLoginSessionNotFound)
+	}
+
+	id, ok := session.Values["id"]
+	if !ok {
+		return "", fmt.Errorf("%w", ErrUserNotLoggedIn)
+	}
+
+	userID, ok := id.(string)
+	if !ok {
+		return "", fmt.Errorf("%v %w", err, ErrUserNotLoggedIn)
+	}
+	return userID, nil
+}
+
+func (a *API) UpdateBillingID(r *http.Request, billingID string) error {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return err
+	}
+	return a.userStore.UpdateBillingID(userID, billingID)
 }
