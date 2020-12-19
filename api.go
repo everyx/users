@@ -577,6 +577,10 @@ func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
+		err = a.userStore.MarkConfirmed(id, true)
+		if err != nil {
+			return err
+		}
 	} else {
 		// otherwise just update provider & metadata
 		err = a.userStore.UpdateProvider(id, usr.Provider)
@@ -661,7 +665,7 @@ func (a *API) GetSessionVal(r *http.Request, key string) (interface{}, error) {
 func (a *API) GetSessionStringVal(r *http.Request, key string) *string {
 	val, err := a.GetSessionVal(r, key)
 	if err != nil {
-		log.Println(err)
+		log.Println("getSessionVal: ", err)
 		return nil
 	}
 	strVal, ok := val.(string)
