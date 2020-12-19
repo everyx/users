@@ -525,12 +525,20 @@ func (a *API) LoginWithOTP(w http.ResponseWriter, r *http.Request, otp string) e
 	return nil
 }
 
-func (a *API) UpdateMetaData(id string, metaData map[string]interface{}) error {
-	return a.userStore.UpsertMetaData(id, metaData)
+func (a *API) UpdateMetaData(r *http.Request, metaData map[string]interface{}) error {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return err
+	}
+	return a.userStore.UpsertMetaData(userID, metaData)
 }
 
-func (a *API) DeleteMetaDataKeys(id string, keys []string) error {
-	return a.userStore.DeleteKeysMetaData(id, keys)
+func (a *API) DeleteMetaDataKeys(r *http.Request, keys []string) error {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return err
+	}
+	return a.userStore.DeleteKeysMetaData(userID, keys)
 }
 
 func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request) error {
