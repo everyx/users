@@ -46,6 +46,7 @@ func (User) Fields() []ent.Field {
 		field.String("email_change_token").NotEmpty().Optional().Nillable().Unique(),
 
 		field.JSON("metadata", map[string]interface{}{}),
+		field.Strings("roles").Optional(),
 
 		field.Time("created_at").Immutable().Default(time.Now),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),

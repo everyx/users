@@ -539,6 +539,7 @@ type UserMutation struct {
 	email_change_sent_at *time.Time
 	email_change_token   *string
 	metadata             *map[string]interface{}
+	roles                *[]string
 	created_at           *time.Time
 	updated_at           *time.Time
 	last_signin_at       *time.Time
@@ -1381,6 +1382,56 @@ func (m *UserMutation) ResetMetadata() {
 	m.metadata = nil
 }
 
+// SetRoles sets the roles field.
+func (m *UserMutation) SetRoles(s []string) {
+	m.roles = &s
+}
+
+// Roles returns the roles value in the mutation.
+func (m *UserMutation) Roles() (r []string, exists bool) {
+	v := m.roles
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRoles returns the old roles value of the User.
+// If the User object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *UserMutation) OldRoles(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldRoles is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldRoles requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRoles: %w", err)
+	}
+	return oldValue.Roles, nil
+}
+
+// ClearRoles clears the value of roles.
+func (m *UserMutation) ClearRoles() {
+	m.roles = nil
+	m.clearedFields[user.FieldRoles] = struct{}{}
+}
+
+// RolesCleared returns if the field roles was cleared in this mutation.
+func (m *UserMutation) RolesCleared() bool {
+	_, ok := m.clearedFields[user.FieldRoles]
+	return ok
+}
+
+// ResetRoles reset all changes of the "roles" field.
+func (m *UserMutation) ResetRoles() {
+	m.roles = nil
+	delete(m.clearedFields, user.FieldRoles)
+}
+
 // SetCreatedAt sets the created_at field.
 func (m *UserMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -1519,7 +1570,7 @@ func (m *UserMutation) Type() string {
 // this mutation. Note that, in order to get all numeric
 // fields that were in/decremented, call AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.billing_id != nil {
 		fields = append(fields, user.FieldBillingID)
 	}
@@ -1567,6 +1618,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.metadata != nil {
 		fields = append(fields, user.FieldMetadata)
+	}
+	if m.roles != nil {
+		fields = append(fields, user.FieldRoles)
 	}
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
@@ -1617,6 +1671,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.EmailChangeToken()
 	case user.FieldMetadata:
 		return m.Metadata()
+	case user.FieldRoles:
+		return m.Roles()
 	case user.FieldCreatedAt:
 		return m.CreatedAt()
 	case user.FieldUpdatedAt:
@@ -1664,6 +1720,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldEmailChangeToken(ctx)
 	case user.FieldMetadata:
 		return m.OldMetadata(ctx)
+	case user.FieldRoles:
+		return m.OldRoles(ctx)
 	case user.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case user.FieldUpdatedAt:
@@ -1791,6 +1849,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetMetadata(v)
 		return nil
+	case user.FieldRoles:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRoles(v)
+		return nil
 	case user.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -1878,6 +1943,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldEmailChangeToken) {
 		fields = append(fields, user.FieldEmailChangeToken)
 	}
+	if m.FieldCleared(user.FieldRoles) {
+		fields = append(fields, user.FieldRoles)
+	}
 	if m.FieldCleared(user.FieldLastSigninAt) {
 		fields = append(fields, user.FieldLastSigninAt)
 	}
@@ -1930,6 +1998,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldEmailChangeToken:
 		m.ClearEmailChangeToken()
+		return nil
+	case user.FieldRoles:
+		m.ClearRoles()
 		return nil
 	case user.FieldLastSigninAt:
 		m.ClearLastSigninAt()
@@ -1990,6 +2061,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldMetadata:
 		m.ResetMetadata()
+		return nil
+	case user.FieldRoles:
+		m.ResetRoles()
 		return nil
 	case user.FieldCreatedAt:
 		m.ResetCreatedAt()

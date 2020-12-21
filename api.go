@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zpatrick/rbac"
+
 	"github.com/hako/branca"
 
 	"github.com/lithammer/shortuuid/v3"
@@ -29,6 +31,11 @@ const (
 	ctxUserIdKey    = "key_user_id"
 )
 
+type Permission struct {
+	ActionMatcher func(action string) (bool, error)
+	TargetMatcher func(userID string) func(target string) (bool, error)
+}
+
 type Config struct {
 	Driver          string
 	Datasource      string
@@ -36,6 +43,7 @@ type Config struct {
 	SendMail        SendMailFunc
 	APIMasterSecret string
 	GothProviders   []goth.Provider
+	Roles           map[string][]Permission
 }
 
 type User struct {
@@ -67,16 +75,18 @@ func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
 		sessionStore: sessionStore,
 		sendMail:     cfg.SendMail,
 		branca:       branca.NewBranca(cfg.APIMasterSecret),
+		roles:        cfg.Roles,
 	}, nil
 }
 
-func NewAPI(ctx context.Context, apiMasterSecret string, userStore UserStore, sessionStore SessionsStore, sendMail SendMailFunc) *API {
+func NewAPI(ctx context.Context, apiMasterSecret string, userStore UserStore, sessionStore SessionsStore, sendMail SendMailFunc, roles map[string][]Permission, defaultRole string) *API {
 	return &API{
 		ctx:          ctx,
 		userStore:    userStore,
 		sessionStore: sessionStore,
 		sendMail:     sendMail,
 		branca:       branca.NewBranca(apiMasterSecret),
+		roles:        roles,
 	}
 }
 
@@ -86,6 +96,7 @@ type API struct {
 	sessionStore SessionsStore
 	sendMail     SendMailFunc
 	branca       *branca.Branca
+	roles        map[string][]Permission
 }
 
 // hashPassword generates a hashed password from a plaintext string
@@ -98,7 +109,7 @@ func hashPassword(password string) (string, error) {
 	return string(pw), nil
 }
 
-func (a *API) Signup(email, password string, metadata map[string]interface{}) error {
+func (a *API) Signup(email, password, role string, metadata map[string]interface{}) error {
 
 	if len(password) < 8 {
 		return fmt.Errorf("%w", ErrInvalidPassword)
@@ -118,7 +129,7 @@ func (a *API) Signup(email, password string, metadata map[string]interface{}) er
 		return fmt.Errorf("%w", ErrUserExists)
 	}
 
-	id, err := a.userStore.New(email, hashedPassword, "email_signup", metadata)
+	id, err := a.userStore.New(email, hashedPassword, role, "email_signup", metadata)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -541,7 +552,7 @@ func (a *API) DeleteMetaDataKeys(r *http.Request, keys []string) error {
 	return a.userStore.DeleteKeysMetaData(userID, keys)
 }
 
-func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request) error {
+func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request, role string, metadata map[string]interface{}) error {
 	usr, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
 		return err
@@ -566,8 +577,12 @@ func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request) error {
 		IDToken           string
 	}
 
-	metadata := map[string]interface{}{
-		"name": usr.Name,
+	if metadata == nil {
+		metadata = map[string]interface{}{
+			"name": usr.Name,
+		}
+	} else {
+		metadata["name"] = usr.Name
 	}
 
 	userMap := structs.Map(usr)
@@ -581,7 +596,7 @@ func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request) error {
 	id, err = a.userStore.UserIDByEmail(usr.Email)
 	if err != nil {
 		// user not found, create a user
-		id, err = a.userStore.New(usr.Email, usr.AccessToken, usr.Provider, metadata)
+		id, err = a.userStore.New(usr.Email, usr.AccessToken, role, usr.Provider, metadata)
 		if err != nil {
 			return err
 		}
@@ -673,7 +688,6 @@ func (a *API) GetSessionVal(r *http.Request, key string) (interface{}, error) {
 func (a *API) GetSessionStringVal(r *http.Request, key string) *string {
 	val, err := a.GetSessionVal(r, key)
 	if err != nil {
-		log.Println("getSessionVal: ", err)
 		return nil
 	}
 	strVal, ok := val.(string)
@@ -739,4 +753,89 @@ func (a *API) UpdateBillingID(r *http.Request, billingID string) error {
 		return err
 	}
 	return a.userStore.UpdateBillingID(userID, billingID)
+}
+
+func (a *API) AddRole(r *http.Request, role string) error {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return err
+	}
+	return a.userStore.AddRole(userID, role)
+}
+
+func (a *API) DeleteRole(r *http.Request, role string) error {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return err
+	}
+	return a.userStore.DeleteRole(userID, role)
+}
+
+func (a *API) ClearRoles(r *http.Request) error {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return err
+	}
+	return a.userStore.ClearRoles(userID)
+}
+
+func (a *API) GetRoles(r *http.Request) ([]string, error) {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return nil, err
+	}
+	return a.userStore.GetRoles(userID)
+}
+
+func (a *API) Can(r *http.Request, action, target string) (bool, error) {
+	userID, err := a.getUserIDFromSession(r)
+	if err != nil {
+		return false, err
+	}
+
+	userRoles, err := a.userStore.GetRoles(userID)
+	if err != nil {
+		return false, err
+	}
+
+	if len(userRoles) == 0 {
+		return false, fmt.Errorf("user has no roles")
+	}
+
+	for _, userRole := range userRoles {
+		if strings.Contains(userRole, "::") {
+			parts := strings.SplitAfter(userRole, "::")
+			if len(parts) == 2 {
+				// e.g. team::userid
+				if parts[1] != userID {
+					continue
+				}
+				userRole = parts[0]
+			}
+		}
+		role, ok := a.roles[userRole]
+		if !ok {
+			continue
+		}
+
+		var rbacPermissions []rbac.Permission
+		for _, perm := range role {
+			rbacPermissions = append(rbacPermissions, rbac.NewPermission(perm.ActionMatcher, perm.TargetMatcher(userID)))
+		}
+		rbacRole := rbac.Role{
+			RoleID:      userRole,
+			Permissions: rbacPermissions,
+		}
+		can, err := rbacRole.Can(action, target)
+		if err != nil {
+			log.Printf("can %v %v, err: %v", action, target, err)
+			continue
+		}
+		if can {
+			return true, nil
+		}
+
+	}
+
+	return false, nil
 }

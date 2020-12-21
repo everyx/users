@@ -50,6 +50,8 @@ type User struct {
 	EmailChangeToken *string `json:"email_change_token,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	// Roles holds the value of the "roles" field.
+	Roles []string `json:"roles,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -78,6 +80,7 @@ func (*User) scanValues() []interface{} {
 		&sql.NullTime{},   // email_change_sent_at
 		&sql.NullString{}, // email_change_token
 		&[]byte{},         // metadata
+		&[]byte{},         // roles
 		&sql.NullTime{},   // created_at
 		&sql.NullTime{},   // updated_at
 		&sql.NullTime{},   // last_signin_at
@@ -187,18 +190,26 @@ func (u *User) assignValues(values ...interface{}) error {
 			return fmt.Errorf("unmarshal field metadata: %v", err)
 		}
 	}
-	if value, ok := values[16].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field created_at", values[16])
+
+	if value, ok := values[16].(*[]byte); !ok {
+		return fmt.Errorf("unexpected type %T for field roles", values[16])
+	} else if value != nil && len(*value) > 0 {
+		if err := json.Unmarshal(*value, &u.Roles); err != nil {
+			return fmt.Errorf("unmarshal field roles: %v", err)
+		}
+	}
+	if value, ok := values[17].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field created_at", values[17])
 	} else if value.Valid {
 		u.CreatedAt = value.Time
 	}
-	if value, ok := values[17].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field updated_at", values[17])
+	if value, ok := values[18].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field updated_at", values[18])
 	} else if value.Valid {
 		u.UpdatedAt = value.Time
 	}
-	if value, ok := values[18].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field last_signin_at", values[18])
+	if value, ok := values[19].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field last_signin_at", values[19])
 	} else if value.Valid {
 		u.LastSigninAt = new(time.Time)
 		*u.LastSigninAt = value.Time
@@ -275,6 +286,8 @@ func (u *User) String() string {
 	}
 	builder.WriteString(", metadata=")
 	builder.WriteString(fmt.Sprintf("%v", u.Metadata))
+	builder.WriteString(", roles=")
+	builder.WriteString(fmt.Sprintf("%v", u.Roles))
 	builder.WriteString(", created_at=")
 	builder.WriteString(u.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", updated_at=")

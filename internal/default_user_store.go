@@ -32,10 +32,11 @@ func (d *DefaultUserStore) updateUserBuilder(id string) (*models.UserUpdateOne, 
 	return d.Client.User.UpdateOneID(uid).SetUpdatedAt(time.Now()), nil
 }
 
-func (d *DefaultUserStore) New(email, password, provider string, meta map[string]interface{}) (string, error) {
+func (d *DefaultUserStore) New(email, password, role, provider string, meta map[string]interface{}) (string, error) {
 	usr, err := d.Client.User.Create().
 		SetEmail(email).
 		SetPassword(password).
+		SetRoles([]string{role}).
 		SetProvider(provider).
 		SetMetadata(meta).
 		Save(d.Ctx)
@@ -135,6 +136,15 @@ func (d *DefaultUserStore) GetEmailChange(id string) (string, error) {
 	return usr.EmailChange, nil
 }
 
+func (d *DefaultUserStore) GetRoles(id string) ([]string, error) {
+	usr, err := d.getUser(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return usr.Roles, nil
+}
+
 func (d *DefaultUserStore) IsEmailConfirmed(id string) (bool, error) {
 	usr, err := d.getUser(id)
 	if err != nil {
@@ -150,6 +160,71 @@ func (d *DefaultUserStore) DeleteUser(id string) error {
 		return err
 	}
 	return d.Client.User.DeleteOne(usr).Exec(d.Ctx)
+}
+
+func (d *DefaultUserStore) AddRole(id, role string) error {
+	usr, err := d.getUser(id)
+	if err != nil {
+		return err
+	}
+	var roles []string
+	if usr.Roles == nil {
+		roles = usr.Roles
+	}
+	roles = append(roles, role)
+	usrUpdate, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = usrUpdate.SetRoles(roles).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DefaultUserStore) DeleteRole(id, role string) error {
+	usr, err := d.getUser(id)
+	if err != nil {
+		return err
+	}
+	if usr.Roles == nil || len(usr.Roles) == 0 {
+		return nil
+	}
+	// filter out the role
+	var roles []string
+	for _, r := range usr.Roles {
+		if r == role {
+			continue
+		}
+		roles = append(roles, role)
+	}
+
+	usrUpdate, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = usrUpdate.SetRoles(roles).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DefaultUserStore) ClearRoles(id string) error {
+
+	usrUpdate, err := d.updateUserBuilder(id)
+	if err != nil {
+		return err
+	}
+	_, err = usrUpdate.ClearRoles().Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *DefaultUserStore) UpdatePassword(id, password string) error {

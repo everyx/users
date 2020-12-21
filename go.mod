@@ -17,6 +17,8 @@ require (
 	github.com/lithammer/shortuuid/v3 v3.0.5
 	github.com/markbates/goth v1.66.1
 	github.com/mattn/go-sqlite3 v1.14.5
+	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/zpatrick/rbac v0.0.0-20180829190353-d2c4f050cf28 // indirect
 	golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9
 	golang.org/x/mod v0.4.0 // indirect
 	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11 // indirect

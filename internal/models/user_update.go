@@ -291,6 +291,18 @@ func (uu *UserUpdate) SetMetadata(m map[string]interface{}) *UserUpdate {
 	return uu
 }
 
+// SetRoles sets the roles field.
+func (uu *UserUpdate) SetRoles(s []string) *UserUpdate {
+	uu.mutation.SetRoles(s)
+	return uu
+}
+
+// ClearRoles clears the value of roles.
+func (uu *UserUpdate) ClearRoles() *UserUpdate {
+	uu.mutation.ClearRoles()
+	return uu
+}
+
 // SetUpdatedAt sets the updated_at field.
 func (uu *UserUpdate) SetUpdatedAt(t time.Time) *UserUpdate {
 	uu.mutation.SetUpdatedAt(t)
@@ -645,6 +657,19 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: user.FieldMetadata,
 		})
 	}
+	if value, ok := uu.mutation.Roles(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: user.FieldRoles,
+		})
+	}
+	if uu.mutation.RolesCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Column: user.FieldRoles,
+		})
+	}
 	if value, ok := uu.mutation.UpdatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
@@ -944,6 +969,18 @@ func (uuo *UserUpdateOne) ClearEmailChangeToken() *UserUpdateOne {
 // SetMetadata sets the metadata field.
 func (uuo *UserUpdateOne) SetMetadata(m map[string]interface{}) *UserUpdateOne {
 	uuo.mutation.SetMetadata(m)
+	return uuo
+}
+
+// SetRoles sets the roles field.
+func (uuo *UserUpdateOne) SetRoles(s []string) *UserUpdateOne {
+	uuo.mutation.SetRoles(s)
+	return uuo
+}
+
+// ClearRoles clears the value of roles.
+func (uuo *UserUpdateOne) ClearRoles() *UserUpdateOne {
+	uuo.mutation.ClearRoles()
 	return uuo
 }
 
@@ -1297,6 +1334,19 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Type:   field.TypeJSON,
 			Value:  value,
 			Column: user.FieldMetadata,
+		})
+	}
+	if value, ok := uuo.mutation.Roles(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: user.FieldRoles,
+		})
+	}
+	if uuo.mutation.RolesCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Column: user.FieldRoles,
 		})
 	}
 	if value, ok := uuo.mutation.UpdatedAt(); ok {

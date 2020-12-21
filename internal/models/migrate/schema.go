@@ -44,6 +44,7 @@ var (
 		{Name: "email_change_sent_at", Type: field.TypeTime, Nullable: true},
 		{Name: "email_change_token", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "metadata", Type: field.TypeJSON},
+		{Name: "roles", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "last_signin_at", Type: field.TypeTime, Nullable: true},
