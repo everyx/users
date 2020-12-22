@@ -28,12 +28,19 @@ import (
 const (
 	jsonContentType = "application/json"
 	formContentType = "application/x-www-form-urlencoded"
-	ctxUserIdKey    = "key_user_id"
+	CtxUserIdKey    = "key_user_id"
 )
 
 type Permission struct {
-	ActionMatcher func(action string) (bool, error)
-	TargetMatcher func(userID string) func(target string) (bool, error)
+	ActionMatcher rbac.Matcher
+	TargetMatcher func(userID string) rbac.Matcher
+}
+
+func NewPermission(action string, targetMatcher func(userID string) rbac.Matcher) Permission {
+	return Permission{
+		ActionMatcher: rbac.GlobMatch(action),
+		TargetMatcher: targetMatcher,
+	}
 }
 
 type Config struct {
@@ -256,7 +263,7 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 			}
 
 			ctx := r.Context()
-			ctx = context.WithValue(ctx, ctxUserIdKey, id)
+			ctx = context.WithValue(ctx, CtxUserIdKey, id)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -290,7 +297,7 @@ func (a *API) IsAuthenticated(next http.Handler) http.Handler {
 			}
 		} else {
 			ctx := r.Context()
-			ctx = context.WithValue(ctx, ctxUserIdKey, id)
+			ctx = context.WithValue(ctx, CtxUserIdKey, id)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
