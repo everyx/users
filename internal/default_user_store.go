@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/adnaan/users/internal/models"
@@ -32,17 +33,80 @@ func (d *DefaultUserStore) updateUserBuilder(id string) (*models.UserUpdateOne, 
 	return d.Client.User.UpdateOneID(uid).SetUpdatedAt(time.Now()), nil
 }
 
-func (d *DefaultUserStore) New(email, password, role, provider string, meta map[string]interface{}) (string, error) {
-	usr, err := d.Client.User.Create().
-		SetEmail(email).
-		SetPassword(password).
-		SetRoles([]string{role}).
-		SetProvider(provider).
-		SetMetadata(meta).
-		Save(d.Ctx)
-	if err != nil {
+func (d *DefaultUserStore) New(email, password, role, provider string, meta map[string]interface{}, sendMailFunc func(string, string) error) (string, error) {
+
+	var wrkspace *models.Workspace
+	var usr *models.User
+	var err error
+
+	if err := withTx(d.Ctx, d.Client, func(tx *models.Tx) error {
+		// create user
+		createUser := tx.User.Create().
+			SetEmail(email).
+			SetPassword(password).
+			SetRoles([]string{role}).
+			SetProvider(provider).
+			SetMetadata(meta)
+
+		// send confirmation email
+		if sendMailFunc != nil {
+			confirmationToken := uuid.New().String()
+			err = sendMailFunc(confirmationToken, email)
+			if err != nil {
+				return fmt.Errorf("err sending confirmation email %v", err)
+			}
+
+			createUser = createUser.SetConfirmationToken(confirmationToken).SetConfirmationSentAt(time.Now())
+
+		} else {
+			if provider == "email_signup" {
+				return fmt.Errorf("provider is email but sendEmailFunc is nil")
+			}
+			createUser = createUser.SetConfirmed(true)
+		}
+
+		// create user
+		usr, err = createUser.Save(d.Ctx)
+		if err != nil {
+			return err
+		}
+
+		var name string
+		nameVal, ok := meta["name"]
+		if ok {
+			nameStr, ok := nameVal.(string)
+			if ok {
+				name = nameStr
+			}
+		}
+
+		// create default personal workspace
+		wrkspace, err = tx.Workspace.Create().
+			SetName(fmt.Sprintf("%s's Personal", name)).
+			SetDescription(fmt.Sprintf("%s Personal Plan", email)).
+			SetOwner(usr).
+			SetPlan("default").
+			Save(d.Ctx)
+		if err != nil {
+			return err
+		}
+		// create role for personal workspace
+		_, err = tx.WorkspaceRole.Create().
+			SetName("owner").
+			SetWorkspaceID(wrkspace.ID).
+			SetWorkspaces(wrkspace).
+			SetUserID(usr.ID).
+			SetUsers(usr).
+			Save(d.Ctx)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		return "", err
 	}
+
 	return usr.ID.String(), nil
 }
 

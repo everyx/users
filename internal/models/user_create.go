@@ -8,7 +8,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/adnaan/users/internal/models/grouprole"
 	"github.com/adnaan/users/internal/models/user"
+	"github.com/adnaan/users/internal/models/userrole"
+	"github.com/adnaan/users/internal/models/workspace"
+	"github.com/adnaan/users/internal/models/workspacerole"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
 	"github.com/google/uuid"
@@ -219,6 +223,12 @@ func (uc *UserCreate) SetRoles(s []string) *UserCreate {
 	return uc
 }
 
+// SetTeams sets the teams field.
+func (uc *UserCreate) SetTeams(m map[string]string) *UserCreate {
+	uc.mutation.SetTeams(m)
+	return uc
+}
+
 // SetCreatedAt sets the created_at field.
 func (uc *UserCreate) SetCreatedAt(t time.Time) *UserCreate {
 	uc.mutation.SetCreatedAt(t)
@@ -265,6 +275,70 @@ func (uc *UserCreate) SetNillableLastSigninAt(t *time.Time) *UserCreate {
 func (uc *UserCreate) SetID(u uuid.UUID) *UserCreate {
 	uc.mutation.SetID(u)
 	return uc
+}
+
+// SetWorkspaceID sets the workspace edge to Workspace by id.
+func (uc *UserCreate) SetWorkspaceID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetWorkspaceID(id)
+	return uc
+}
+
+// SetNillableWorkspaceID sets the workspace edge to Workspace by id if the given value is not nil.
+func (uc *UserCreate) SetNillableWorkspaceID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetWorkspaceID(*id)
+	}
+	return uc
+}
+
+// SetWorkspace sets the workspace edge to Workspace.
+func (uc *UserCreate) SetWorkspace(w *Workspace) *UserCreate {
+	return uc.SetWorkspaceID(w.ID)
+}
+
+// AddWorkspaceRoleIDs adds the workspace_roles edge to WorkspaceRole by ids.
+func (uc *UserCreate) AddWorkspaceRoleIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddWorkspaceRoleIDs(ids...)
+	return uc
+}
+
+// AddWorkspaceRoles adds the workspace_roles edges to WorkspaceRole.
+func (uc *UserCreate) AddWorkspaceRoles(w ...*WorkspaceRole) *UserCreate {
+	ids := make([]uuid.UUID, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uc.AddWorkspaceRoleIDs(ids...)
+}
+
+// AddGroupRoleIDs adds the group_roles edge to GroupRole by ids.
+func (uc *UserCreate) AddGroupRoleIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddGroupRoleIDs(ids...)
+	return uc
+}
+
+// AddGroupRoles adds the group_roles edges to GroupRole.
+func (uc *UserCreate) AddGroupRoles(g ...*GroupRole) *UserCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uc.AddGroupRoleIDs(ids...)
+}
+
+// AddUserRoleIDs adds the user_roles edge to UserRole by ids.
+func (uc *UserCreate) AddUserRoleIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddUserRoleIDs(ids...)
+	return uc
+}
+
+// AddUserRoles adds the user_roles edges to UserRole.
+func (uc *UserCreate) AddUserRoles(u ...*UserRole) *UserCreate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uc.AddUserRoleIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -572,6 +646,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		})
 		_node.Roles = value
 	}
+	if value, ok := uc.mutation.Teams(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: user.FieldTeams,
+		})
+		_node.Teams = value
+	}
 	if value, ok := uc.mutation.CreatedAt(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
@@ -595,6 +677,82 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Column: user.FieldLastSigninAt,
 		})
 		_node.LastSigninAt = &value
+	}
+	if nodes := uc.mutation.WorkspaceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.WorkspaceTable,
+			Columns: []string{user.WorkspaceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspace.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.WorkspaceRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceRolesTable,
+			Columns: []string{user.WorkspaceRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspacerole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.GroupRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GroupRolesTable,
+			Columns: []string{user.GroupRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: grouprole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.UserRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UserRolesTable,
+			Columns: []string{user.UserRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userrole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

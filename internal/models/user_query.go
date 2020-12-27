@@ -4,12 +4,17 @@ package models
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"math"
 
+	"github.com/adnaan/users/internal/models/grouprole"
 	"github.com/adnaan/users/internal/models/predicate"
 	"github.com/adnaan/users/internal/models/user"
+	"github.com/adnaan/users/internal/models/userrole"
+	"github.com/adnaan/users/internal/models/workspace"
+	"github.com/adnaan/users/internal/models/workspacerole"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
@@ -23,6 +28,11 @@ type UserQuery struct {
 	offset     *int
 	order      []OrderFunc
 	predicates []predicate.User
+	// eager-loading edges.
+	withWorkspace      *WorkspaceQuery
+	withWorkspaceRoles *WorkspaceRoleQuery
+	withGroupRoles     *GroupRoleQuery
+	withUserRoles      *UserRoleQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -50,6 +60,94 @@ func (uq *UserQuery) Offset(offset int) *UserQuery {
 func (uq *UserQuery) Order(o ...OrderFunc) *UserQuery {
 	uq.order = append(uq.order, o...)
 	return uq
+}
+
+// QueryWorkspace chains the current query on the workspace edge.
+func (uq *UserQuery) QueryWorkspace() *WorkspaceQuery {
+	query := &WorkspaceQuery{config: uq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery()
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(workspace.Table, workspace.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.WorkspaceTable, user.WorkspaceColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryWorkspaceRoles chains the current query on the workspace_roles edge.
+func (uq *UserQuery) QueryWorkspaceRoles() *WorkspaceRoleQuery {
+	query := &WorkspaceRoleQuery{config: uq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery()
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(workspacerole.Table, workspacerole.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.WorkspaceRolesTable, user.WorkspaceRolesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryGroupRoles chains the current query on the group_roles edge.
+func (uq *UserQuery) QueryGroupRoles() *GroupRoleQuery {
+	query := &GroupRoleQuery{config: uq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery()
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(grouprole.Table, grouprole.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.GroupRolesTable, user.GroupRolesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryUserRoles chains the current query on the user_roles edge.
+func (uq *UserQuery) QueryUserRoles() *UserRoleQuery {
+	query := &UserRoleQuery{config: uq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery()
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(userrole.Table, userrole.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.UserRolesTable, user.UserRolesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first User entity in the query. Returns *NotFoundError when no user was found.
@@ -222,15 +320,63 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:     uq.config,
-		limit:      uq.limit,
-		offset:     uq.offset,
-		order:      append([]OrderFunc{}, uq.order...),
-		predicates: append([]predicate.User{}, uq.predicates...),
+		config:             uq.config,
+		limit:              uq.limit,
+		offset:             uq.offset,
+		order:              append([]OrderFunc{}, uq.order...),
+		predicates:         append([]predicate.User{}, uq.predicates...),
+		withWorkspace:      uq.withWorkspace.Clone(),
+		withWorkspaceRoles: uq.withWorkspaceRoles.Clone(),
+		withGroupRoles:     uq.withGroupRoles.Clone(),
+		withUserRoles:      uq.withUserRoles.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
 	}
+}
+
+//  WithWorkspace tells the query-builder to eager-loads the nodes that are connected to
+// the "workspace" edge. The optional arguments used to configure the query builder of the edge.
+func (uq *UserQuery) WithWorkspace(opts ...func(*WorkspaceQuery)) *UserQuery {
+	query := &WorkspaceQuery{config: uq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withWorkspace = query
+	return uq
+}
+
+//  WithWorkspaceRoles tells the query-builder to eager-loads the nodes that are connected to
+// the "workspace_roles" edge. The optional arguments used to configure the query builder of the edge.
+func (uq *UserQuery) WithWorkspaceRoles(opts ...func(*WorkspaceRoleQuery)) *UserQuery {
+	query := &WorkspaceRoleQuery{config: uq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withWorkspaceRoles = query
+	return uq
+}
+
+//  WithGroupRoles tells the query-builder to eager-loads the nodes that are connected to
+// the "group_roles" edge. The optional arguments used to configure the query builder of the edge.
+func (uq *UserQuery) WithGroupRoles(opts ...func(*GroupRoleQuery)) *UserQuery {
+	query := &GroupRoleQuery{config: uq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withGroupRoles = query
+	return uq
+}
+
+//  WithUserRoles tells the query-builder to eager-loads the nodes that are connected to
+// the "user_roles" edge. The optional arguments used to configure the query builder of the edge.
+func (uq *UserQuery) WithUserRoles(opts ...func(*UserRoleQuery)) *UserQuery {
+	query := &UserRoleQuery{config: uq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withUserRoles = query
+	return uq
 }
 
 // GroupBy used to group vertices by one or more fields/columns.
@@ -297,8 +443,14 @@ func (uq *UserQuery) prepareQuery(ctx context.Context) error {
 
 func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 	var (
-		nodes = []*User{}
-		_spec = uq.querySpec()
+		nodes       = []*User{}
+		_spec       = uq.querySpec()
+		loadedTypes = [4]bool{
+			uq.withWorkspace != nil,
+			uq.withWorkspaceRoles != nil,
+			uq.withGroupRoles != nil,
+			uq.withUserRoles != nil,
+		}
 	)
 	_spec.ScanValues = func() []interface{} {
 		node := &User{config: uq.config}
@@ -311,6 +463,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			return fmt.Errorf("models: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(values...)
 	}
 	if err := sqlgraph.QueryNodes(ctx, uq.driver, _spec); err != nil {
@@ -319,6 +472,122 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+
+	if query := uq.withWorkspace; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*User)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+		}
+		query.withFKs = true
+		query.Where(predicate.Workspace(func(s *sql.Selector) {
+			s.Where(sql.InValues(user.WorkspaceColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.user_workspace
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "user_workspace" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "user_workspace" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.Workspace = n
+		}
+	}
+
+	if query := uq.withWorkspaceRoles; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*User)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.WorkspaceRoles = []*WorkspaceRole{}
+		}
+		query.withFKs = true
+		query.Where(predicate.WorkspaceRole(func(s *sql.Selector) {
+			s.Where(sql.InValues(user.WorkspaceRolesColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.user_workspace_roles
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "user_workspace_roles" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "user_workspace_roles" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.WorkspaceRoles = append(node.Edges.WorkspaceRoles, n)
+		}
+	}
+
+	if query := uq.withGroupRoles; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*User)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.GroupRoles = []*GroupRole{}
+		}
+		query.withFKs = true
+		query.Where(predicate.GroupRole(func(s *sql.Selector) {
+			s.Where(sql.InValues(user.GroupRolesColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.user_group_roles
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "user_group_roles" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "user_group_roles" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.GroupRoles = append(node.Edges.GroupRoles, n)
+		}
+	}
+
+	if query := uq.withUserRoles; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*User)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.UserRoles = []*UserRole{}
+		}
+		query.withFKs = true
+		query.Where(predicate.UserRole(func(s *sql.Selector) {
+			s.Where(sql.InValues(user.UserRolesColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.user_user_roles
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "user_user_roles" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "user_user_roles" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.UserRoles = append(node.Edges.UserRoles, n)
+		}
+	}
+
 	return nodes, nil
 }
 

@@ -7,11 +7,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/adnaan/users/internal/models/grouprole"
 	"github.com/adnaan/users/internal/models/predicate"
 	"github.com/adnaan/users/internal/models/user"
+	"github.com/adnaan/users/internal/models/userrole"
+	"github.com/adnaan/users/internal/models/workspace"
+	"github.com/adnaan/users/internal/models/workspacerole"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/facebook/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -303,6 +308,18 @@ func (uu *UserUpdate) ClearRoles() *UserUpdate {
 	return uu
 }
 
+// SetTeams sets the teams field.
+func (uu *UserUpdate) SetTeams(m map[string]string) *UserUpdate {
+	uu.mutation.SetTeams(m)
+	return uu
+}
+
+// ClearTeams clears the value of teams.
+func (uu *UserUpdate) ClearTeams() *UserUpdate {
+	uu.mutation.ClearTeams()
+	return uu
+}
+
 // SetUpdatedAt sets the updated_at field.
 func (uu *UserUpdate) SetUpdatedAt(t time.Time) *UserUpdate {
 	uu.mutation.SetUpdatedAt(t)
@@ -329,9 +346,142 @@ func (uu *UserUpdate) ClearLastSigninAt() *UserUpdate {
 	return uu
 }
 
+// SetWorkspaceID sets the workspace edge to Workspace by id.
+func (uu *UserUpdate) SetWorkspaceID(id uuid.UUID) *UserUpdate {
+	uu.mutation.SetWorkspaceID(id)
+	return uu
+}
+
+// SetNillableWorkspaceID sets the workspace edge to Workspace by id if the given value is not nil.
+func (uu *UserUpdate) SetNillableWorkspaceID(id *uuid.UUID) *UserUpdate {
+	if id != nil {
+		uu = uu.SetWorkspaceID(*id)
+	}
+	return uu
+}
+
+// SetWorkspace sets the workspace edge to Workspace.
+func (uu *UserUpdate) SetWorkspace(w *Workspace) *UserUpdate {
+	return uu.SetWorkspaceID(w.ID)
+}
+
+// AddWorkspaceRoleIDs adds the workspace_roles edge to WorkspaceRole by ids.
+func (uu *UserUpdate) AddWorkspaceRoleIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddWorkspaceRoleIDs(ids...)
+	return uu
+}
+
+// AddWorkspaceRoles adds the workspace_roles edges to WorkspaceRole.
+func (uu *UserUpdate) AddWorkspaceRoles(w ...*WorkspaceRole) *UserUpdate {
+	ids := make([]uuid.UUID, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uu.AddWorkspaceRoleIDs(ids...)
+}
+
+// AddGroupRoleIDs adds the group_roles edge to GroupRole by ids.
+func (uu *UserUpdate) AddGroupRoleIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddGroupRoleIDs(ids...)
+	return uu
+}
+
+// AddGroupRoles adds the group_roles edges to GroupRole.
+func (uu *UserUpdate) AddGroupRoles(g ...*GroupRole) *UserUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uu.AddGroupRoleIDs(ids...)
+}
+
+// AddUserRoleIDs adds the user_roles edge to UserRole by ids.
+func (uu *UserUpdate) AddUserRoleIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddUserRoleIDs(ids...)
+	return uu
+}
+
+// AddUserRoles adds the user_roles edges to UserRole.
+func (uu *UserUpdate) AddUserRoles(u ...*UserRole) *UserUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uu.AddUserRoleIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
+}
+
+// ClearWorkspace clears the "workspace" edge to type Workspace.
+func (uu *UserUpdate) ClearWorkspace() *UserUpdate {
+	uu.mutation.ClearWorkspace()
+	return uu
+}
+
+// ClearWorkspaceRoles clears all "workspace_roles" edges to type WorkspaceRole.
+func (uu *UserUpdate) ClearWorkspaceRoles() *UserUpdate {
+	uu.mutation.ClearWorkspaceRoles()
+	return uu
+}
+
+// RemoveWorkspaceRoleIDs removes the workspace_roles edge to WorkspaceRole by ids.
+func (uu *UserUpdate) RemoveWorkspaceRoleIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemoveWorkspaceRoleIDs(ids...)
+	return uu
+}
+
+// RemoveWorkspaceRoles removes workspace_roles edges to WorkspaceRole.
+func (uu *UserUpdate) RemoveWorkspaceRoles(w ...*WorkspaceRole) *UserUpdate {
+	ids := make([]uuid.UUID, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uu.RemoveWorkspaceRoleIDs(ids...)
+}
+
+// ClearGroupRoles clears all "group_roles" edges to type GroupRole.
+func (uu *UserUpdate) ClearGroupRoles() *UserUpdate {
+	uu.mutation.ClearGroupRoles()
+	return uu
+}
+
+// RemoveGroupRoleIDs removes the group_roles edge to GroupRole by ids.
+func (uu *UserUpdate) RemoveGroupRoleIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemoveGroupRoleIDs(ids...)
+	return uu
+}
+
+// RemoveGroupRoles removes group_roles edges to GroupRole.
+func (uu *UserUpdate) RemoveGroupRoles(g ...*GroupRole) *UserUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uu.RemoveGroupRoleIDs(ids...)
+}
+
+// ClearUserRoles clears all "user_roles" edges to type UserRole.
+func (uu *UserUpdate) ClearUserRoles() *UserUpdate {
+	uu.mutation.ClearUserRoles()
+	return uu
+}
+
+// RemoveUserRoleIDs removes the user_roles edge to UserRole by ids.
+func (uu *UserUpdate) RemoveUserRoleIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemoveUserRoleIDs(ids...)
+	return uu
+}
+
+// RemoveUserRoles removes user_roles edges to UserRole.
+func (uu *UserUpdate) RemoveUserRoles(u ...*UserRole) *UserUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uu.RemoveUserRoleIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -670,6 +820,19 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: user.FieldRoles,
 		})
 	}
+	if value, ok := uu.mutation.Teams(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: user.FieldTeams,
+		})
+	}
+	if uu.mutation.TeamsCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Column: user.FieldTeams,
+		})
+	}
 	if value, ok := uu.mutation.UpdatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
@@ -689,6 +852,203 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Type:   field.TypeTime,
 			Column: user.FieldLastSigninAt,
 		})
+	}
+	if uu.mutation.WorkspaceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.WorkspaceTable,
+			Columns: []string{user.WorkspaceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspace.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.WorkspaceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.WorkspaceTable,
+			Columns: []string{user.WorkspaceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspace.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.WorkspaceRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceRolesTable,
+			Columns: []string{user.WorkspaceRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspacerole.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedWorkspaceRolesIDs(); len(nodes) > 0 && !uu.mutation.WorkspaceRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceRolesTable,
+			Columns: []string{user.WorkspaceRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspacerole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.WorkspaceRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceRolesTable,
+			Columns: []string{user.WorkspaceRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspacerole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.GroupRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GroupRolesTable,
+			Columns: []string{user.GroupRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: grouprole.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedGroupRolesIDs(); len(nodes) > 0 && !uu.mutation.GroupRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GroupRolesTable,
+			Columns: []string{user.GroupRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: grouprole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.GroupRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GroupRolesTable,
+			Columns: []string{user.GroupRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: grouprole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.UserRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UserRolesTable,
+			Columns: []string{user.UserRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userrole.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedUserRolesIDs(); len(nodes) > 0 && !uu.mutation.UserRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UserRolesTable,
+			Columns: []string{user.UserRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userrole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.UserRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UserRolesTable,
+			Columns: []string{user.UserRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userrole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -984,6 +1344,18 @@ func (uuo *UserUpdateOne) ClearRoles() *UserUpdateOne {
 	return uuo
 }
 
+// SetTeams sets the teams field.
+func (uuo *UserUpdateOne) SetTeams(m map[string]string) *UserUpdateOne {
+	uuo.mutation.SetTeams(m)
+	return uuo
+}
+
+// ClearTeams clears the value of teams.
+func (uuo *UserUpdateOne) ClearTeams() *UserUpdateOne {
+	uuo.mutation.ClearTeams()
+	return uuo
+}
+
 // SetUpdatedAt sets the updated_at field.
 func (uuo *UserUpdateOne) SetUpdatedAt(t time.Time) *UserUpdateOne {
 	uuo.mutation.SetUpdatedAt(t)
@@ -1010,9 +1382,142 @@ func (uuo *UserUpdateOne) ClearLastSigninAt() *UserUpdateOne {
 	return uuo
 }
 
+// SetWorkspaceID sets the workspace edge to Workspace by id.
+func (uuo *UserUpdateOne) SetWorkspaceID(id uuid.UUID) *UserUpdateOne {
+	uuo.mutation.SetWorkspaceID(id)
+	return uuo
+}
+
+// SetNillableWorkspaceID sets the workspace edge to Workspace by id if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableWorkspaceID(id *uuid.UUID) *UserUpdateOne {
+	if id != nil {
+		uuo = uuo.SetWorkspaceID(*id)
+	}
+	return uuo
+}
+
+// SetWorkspace sets the workspace edge to Workspace.
+func (uuo *UserUpdateOne) SetWorkspace(w *Workspace) *UserUpdateOne {
+	return uuo.SetWorkspaceID(w.ID)
+}
+
+// AddWorkspaceRoleIDs adds the workspace_roles edge to WorkspaceRole by ids.
+func (uuo *UserUpdateOne) AddWorkspaceRoleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddWorkspaceRoleIDs(ids...)
+	return uuo
+}
+
+// AddWorkspaceRoles adds the workspace_roles edges to WorkspaceRole.
+func (uuo *UserUpdateOne) AddWorkspaceRoles(w ...*WorkspaceRole) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uuo.AddWorkspaceRoleIDs(ids...)
+}
+
+// AddGroupRoleIDs adds the group_roles edge to GroupRole by ids.
+func (uuo *UserUpdateOne) AddGroupRoleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddGroupRoleIDs(ids...)
+	return uuo
+}
+
+// AddGroupRoles adds the group_roles edges to GroupRole.
+func (uuo *UserUpdateOne) AddGroupRoles(g ...*GroupRole) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uuo.AddGroupRoleIDs(ids...)
+}
+
+// AddUserRoleIDs adds the user_roles edge to UserRole by ids.
+func (uuo *UserUpdateOne) AddUserRoleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddUserRoleIDs(ids...)
+	return uuo
+}
+
+// AddUserRoles adds the user_roles edges to UserRole.
+func (uuo *UserUpdateOne) AddUserRoles(u ...*UserRole) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uuo.AddUserRoleIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
+}
+
+// ClearWorkspace clears the "workspace" edge to type Workspace.
+func (uuo *UserUpdateOne) ClearWorkspace() *UserUpdateOne {
+	uuo.mutation.ClearWorkspace()
+	return uuo
+}
+
+// ClearWorkspaceRoles clears all "workspace_roles" edges to type WorkspaceRole.
+func (uuo *UserUpdateOne) ClearWorkspaceRoles() *UserUpdateOne {
+	uuo.mutation.ClearWorkspaceRoles()
+	return uuo
+}
+
+// RemoveWorkspaceRoleIDs removes the workspace_roles edge to WorkspaceRole by ids.
+func (uuo *UserUpdateOne) RemoveWorkspaceRoleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemoveWorkspaceRoleIDs(ids...)
+	return uuo
+}
+
+// RemoveWorkspaceRoles removes workspace_roles edges to WorkspaceRole.
+func (uuo *UserUpdateOne) RemoveWorkspaceRoles(w ...*WorkspaceRole) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return uuo.RemoveWorkspaceRoleIDs(ids...)
+}
+
+// ClearGroupRoles clears all "group_roles" edges to type GroupRole.
+func (uuo *UserUpdateOne) ClearGroupRoles() *UserUpdateOne {
+	uuo.mutation.ClearGroupRoles()
+	return uuo
+}
+
+// RemoveGroupRoleIDs removes the group_roles edge to GroupRole by ids.
+func (uuo *UserUpdateOne) RemoveGroupRoleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemoveGroupRoleIDs(ids...)
+	return uuo
+}
+
+// RemoveGroupRoles removes group_roles edges to GroupRole.
+func (uuo *UserUpdateOne) RemoveGroupRoles(g ...*GroupRole) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uuo.RemoveGroupRoleIDs(ids...)
+}
+
+// ClearUserRoles clears all "user_roles" edges to type UserRole.
+func (uuo *UserUpdateOne) ClearUserRoles() *UserUpdateOne {
+	uuo.mutation.ClearUserRoles()
+	return uuo
+}
+
+// RemoveUserRoleIDs removes the user_roles edge to UserRole by ids.
+func (uuo *UserUpdateOne) RemoveUserRoleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemoveUserRoleIDs(ids...)
+	return uuo
+}
+
+// RemoveUserRoles removes user_roles edges to UserRole.
+func (uuo *UserUpdateOne) RemoveUserRoles(u ...*UserRole) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uuo.RemoveUserRoleIDs(ids...)
 }
 
 // Save executes the query and returns the updated entity.
@@ -1349,6 +1854,19 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Column: user.FieldRoles,
 		})
 	}
+	if value, ok := uuo.mutation.Teams(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Value:  value,
+			Column: user.FieldTeams,
+		})
+	}
+	if uuo.mutation.TeamsCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeJSON,
+			Column: user.FieldTeams,
+		})
+	}
 	if value, ok := uuo.mutation.UpdatedAt(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
@@ -1368,6 +1886,203 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Type:   field.TypeTime,
 			Column: user.FieldLastSigninAt,
 		})
+	}
+	if uuo.mutation.WorkspaceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.WorkspaceTable,
+			Columns: []string{user.WorkspaceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspace.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.WorkspaceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.WorkspaceTable,
+			Columns: []string{user.WorkspaceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspace.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.WorkspaceRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceRolesTable,
+			Columns: []string{user.WorkspaceRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspacerole.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedWorkspaceRolesIDs(); len(nodes) > 0 && !uuo.mutation.WorkspaceRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceRolesTable,
+			Columns: []string{user.WorkspaceRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspacerole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.WorkspaceRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.WorkspaceRolesTable,
+			Columns: []string{user.WorkspaceRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: workspacerole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.GroupRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GroupRolesTable,
+			Columns: []string{user.GroupRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: grouprole.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedGroupRolesIDs(); len(nodes) > 0 && !uuo.mutation.GroupRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GroupRolesTable,
+			Columns: []string{user.GroupRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: grouprole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.GroupRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GroupRolesTable,
+			Columns: []string{user.GroupRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: grouprole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.UserRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UserRolesTable,
+			Columns: []string{user.UserRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userrole.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedUserRolesIDs(); len(nodes) > 0 && !uuo.mutation.UserRolesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UserRolesTable,
+			Columns: []string{user.UserRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userrole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.UserRolesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.UserRolesTable,
+			Columns: []string{user.UserRolesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: userrole.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &User{config: uuo.config}
 	_spec.Assign = _node.assignValues

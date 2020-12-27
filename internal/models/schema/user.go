@@ -3,6 +3,8 @@ package schema
 import (
 	"time"
 
+	"github.com/facebook/ent/schema/edge"
+
 	"github.com/facebook/ent/dialect/entsql"
 	"github.com/facebook/ent/schema"
 
@@ -47,6 +49,7 @@ func (User) Fields() []ent.Field {
 
 		field.JSON("metadata", map[string]interface{}{}),
 		field.Strings("roles").Optional(),
+		field.JSON("teams", map[string]string{}).Optional(),
 
 		field.Time("created_at").Immutable().Default(time.Now),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
@@ -56,5 +59,10 @@ func (User) Fields() []ent.Field {
 
 // Edges of the User.
 func (User) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("workspace", Workspace.Type).Unique(),
+		edge.To("workspace_roles", WorkspaceRole.Type),
+		edge.To("group_roles", GroupRole.Type),
+		edge.To("user_roles", UserRole.Type),
+	}
 }

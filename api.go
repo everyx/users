@@ -59,6 +59,13 @@ type User struct {
 	Email         string                 `json:"email"`
 	IsAPITokenSet bool                   `json:"is_api_token_set"`
 	Metadata      map[string]interface{} `json:"metadata"`
+	Workspaces    []Workspace            `json:"workspaces"`
+}
+
+type Workspace struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Role string `json:"role"`
 }
 
 func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
@@ -71,39 +78,49 @@ func NewDefaultAPI(ctx context.Context, cfg Config) (*API, error) {
 		return nil, err
 	}
 
+	workspaceStore, err := NewDefaultWorkspaceStore(ctx, cfg.Driver, cfg.Datasource)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(cfg.GothProviders) > 0 {
 		goth.UseProviders(cfg.GothProviders...)
 		gothic.Store = sessionStore
 	}
 
 	return &API{
-		ctx:          ctx,
-		userStore:    userStore,
-		sessionStore: sessionStore,
-		sendMail:     cfg.SendMail,
-		branca:       branca.NewBranca(cfg.APIMasterSecret),
-		roles:        cfg.Roles,
+		ctx:            ctx,
+		userStore:      userStore,
+		sessionStore:   sessionStore,
+		workspaceStore: workspaceStore,
+		sendMail:       cfg.SendMail,
+		branca:         branca.NewBranca(cfg.APIMasterSecret),
+		roles:          cfg.Roles,
 	}, nil
 }
 
-func NewAPI(ctx context.Context, apiMasterSecret string, userStore UserStore, sessionStore SessionsStore, sendMail SendMailFunc, roles map[string][]Permission, defaultRole string) *API {
+func NewAPI(ctx context.Context, apiMasterSecret string,
+	userStore UserStore, sessionStore SessionsStore, workspaceStore WorkspaceStore,
+	sendMail SendMailFunc, roles map[string][]Permission) *API {
 	return &API{
-		ctx:          ctx,
-		userStore:    userStore,
-		sessionStore: sessionStore,
-		sendMail:     sendMail,
-		branca:       branca.NewBranca(apiMasterSecret),
-		roles:        roles,
+		ctx:            ctx,
+		userStore:      userStore,
+		sessionStore:   sessionStore,
+		workspaceStore: workspaceStore,
+		sendMail:       sendMail,
+		branca:         branca.NewBranca(apiMasterSecret),
+		roles:          roles,
 	}
 }
 
 type API struct {
-	ctx          context.Context
-	userStore    UserStore
-	sessionStore SessionsStore
-	sendMail     SendMailFunc
-	branca       *branca.Branca
-	roles        map[string][]Permission
+	ctx            context.Context
+	userStore      UserStore
+	sessionStore   SessionsStore
+	workspaceStore WorkspaceStore
+	sendMail       SendMailFunc
+	branca         *branca.Branca
+	roles          map[string][]Permission
 }
 
 // hashPassword generates a hashed password from a plaintext string
@@ -136,23 +153,11 @@ func (a *API) Signup(email, password, role string, metadata map[string]interface
 		return fmt.Errorf("%w", ErrUserExists)
 	}
 
-	id, err := a.userStore.New(email, hashedPassword, role, "email_signup", metadata)
-	if err != nil {
-		return fmt.Errorf("%v %w", err, ErrInternal)
+	sendMailFunc := func(token, email string) error {
+		return a.sendMail(Confirmation, token, email, metadata)
 	}
 
-	confirmationToken := uuid.New().String()
-	err = a.userStore.SaveConfirmationToken(id, confirmationToken)
-	if err != nil {
-		return fmt.Errorf("%v %w", err, ErrInternal)
-	}
-
-	err = a.sendMail(Confirmation, confirmationToken, email, metadata)
-	if err != nil {
-		return fmt.Errorf("%v %w", err, ErrSendingEmail)
-	}
-
-	err = a.userStore.SaveConfirmationTokenSentAt(id, time.Now())
+	_, err = a.userStore.New(email, hashedPassword, role, "email_signup", metadata, sendMailFunc)
 	if err != nil {
 		return fmt.Errorf("%v %w", err, ErrInternal)
 	}
@@ -319,12 +324,27 @@ func (a *API) LoggedInUser(r *http.Request) (*User, error) {
 		isAPIKeySet = true
 	}
 
+	workspaceMap, err := a.workspaceStore.GetUserWorkspaces(userID)
+	if err != nil {
+		return nil, fmt.Errorf("%v, %w", err, ErrInternal)
+	}
+
+	var workspaces []Workspace
+	for id, data := range workspaceMap {
+		workspaces = append(workspaces, Workspace{
+			ID:   id,
+			Name: data[0],
+			Role: data[1],
+		})
+	}
+
 	user := &User{
 		ID:            userID,
 		BillingID:     billingID,
 		Email:         email,
 		IsAPITokenSet: isAPIKeySet,
 		Metadata:      metadata,
+		Workspaces:    workspaces,
 	}
 
 	return user, nil
@@ -603,11 +623,7 @@ func (a *API) HandleGothCallback(w http.ResponseWriter, r *http.Request, role st
 	id, err = a.userStore.UserIDByEmail(usr.Email)
 	if err != nil {
 		// user not found, create a user
-		id, err = a.userStore.New(usr.Email, usr.AccessToken, role, usr.Provider, metadata)
-		if err != nil {
-			return err
-		}
-		err = a.userStore.MarkConfirmed(id, true)
+		id, err = a.userStore.New(usr.Email, usr.AccessToken, role, usr.Provider, metadata, nil)
 		if err != nil {
 			return err
 		}
@@ -845,4 +861,13 @@ func (a *API) Can(r *http.Request, action, target string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (a *API) GetWorkspaceRole(r *http.Request, workspaceID string) (string, error) {
+	return "", nil
+}
+
+func (a *API) InviteGuests(r *http.Request, workspaceID string, guests []string) error {
+
+	return nil
 }

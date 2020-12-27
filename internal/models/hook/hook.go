@@ -9,6 +9,45 @@ import (
 	"github.com/adnaan/users/internal/models"
 )
 
+// The GroupFunc type is an adapter to allow the use of ordinary
+// function as Group mutator.
+type GroupFunc func(context.Context, *models.GroupMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f GroupFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.GroupMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.GroupMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The GroupRoleFunc type is an adapter to allow the use of ordinary
+// function as GroupRole mutator.
+type GroupRoleFunc func(context.Context, *models.GroupRoleMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f GroupRoleFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.GroupRoleMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.GroupRoleMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The PermissionFunc type is an adapter to allow the use of ordinary
+// function as Permission mutator.
+type PermissionFunc func(context.Context, *models.PermissionMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PermissionFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.PermissionMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.PermissionMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The SessionFunc type is an adapter to allow the use of ordinary
 // function as Session mutator.
 type SessionFunc func(context.Context, *models.SessionMutation) (models.Value, error)
@@ -31,6 +70,45 @@ func (f UserFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, 
 	mv, ok := m.(*models.UserMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.UserMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The UserRoleFunc type is an adapter to allow the use of ordinary
+// function as UserRole mutator.
+type UserRoleFunc func(context.Context, *models.UserRoleMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UserRoleFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.UserRoleMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.UserRoleMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The WorkspaceFunc type is an adapter to allow the use of ordinary
+// function as Workspace mutator.
+type WorkspaceFunc func(context.Context, *models.WorkspaceMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WorkspaceFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.WorkspaceMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.WorkspaceMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The WorkspaceRoleFunc type is an adapter to allow the use of ordinary
+// function as WorkspaceRole mutator.
+type WorkspaceRoleFunc func(context.Context, *models.WorkspaceRoleMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WorkspaceRoleFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.WorkspaceRoleMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.WorkspaceRoleMutation", m)
 	}
 	return f(ctx, mv)
 }

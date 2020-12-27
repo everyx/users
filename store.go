@@ -21,7 +21,7 @@ const defaultPath = "/"
 // UserStore represents the data store for the User model
 type UserStore interface {
 	// Create, Delete
-	New(email, password, role, provider string, meta map[string]interface{}) (string, error)
+	New(email, password, role, provider string, meta map[string]interface{}, sendMailFunc func(string, string) error) (string, error)
 	UserData(id string) (string, string, string, map[string]interface{}, error)
 	UserIDByEmail(email string) (string, error)
 	UserIDByConfirmationToken(token string) (string, error)
@@ -86,6 +86,35 @@ type SessionsStore interface {
 	Close() error
 }
 
+type WorkspaceStore interface {
+	GetWorkspace(id string) (string, string, map[string]interface{}, error)
+	CreateWorkspace(userID, name, description, plan string, metadata map[string]interface{}) (string, error)
+	UpdateWorkspace(workspaceID, name, description, plan string, metadata map[string]interface{}) error
+	DeleteWorkspace(workspaceID string) error
+	GetUserWorkspaces(userID string) (map[string][]string, error)
+
+	WorkspaceUpsertUser(workspaceID, userID, role string) error
+	WorkspaceRemoveUser(workspaceID, userID string) error
+	GetWorkspaceGroups(workspaceID string) ([]string, error)
+
+	GetGroup(id string) (string, string, map[string]interface{}, error)
+	CreateGroup(userID, workspaceID, name, description string, metadata map[string]interface{}) (string, error)
+	UpdateGroup(groupID, name, description string, metadata map[string]interface{}) error
+	DeleteGroup(groupID string) error
+	GetUserGroupRoles(userID string) (map[string]string, error)
+	GroupUpsertUser(groupID, userID, role string) error
+	GroupRemoveUser(groupID, userID string) error
+
+	CreatePermission(roleID, action, target string) error
+	UpdatePermission(roleID, action, target string) error
+	DeletePermission(roleID, action string) error
+	GetUserPermissions(userID string) (map[string]string, error)
+
+	GetUserRoles(userID string) ([]string, error)
+	CreateUserRole(userID, role string) error
+	DeleteUserRole(userID, role string) error
+}
+
 func NewDefaultUserStore(ctx context.Context, driver, dataSource string) (UserStore, error) {
 	client, err := models.Open(driver, dataSource)
 	if err != nil {
@@ -95,6 +124,17 @@ func NewDefaultUserStore(ctx context.Context, driver, dataSource string) (UserSt
 		return nil, err
 	}
 	return &internal.DefaultUserStore{Ctx: ctx, Client: client, Driver: driver, DataSource: dataSource}, nil
+}
+
+func NewDefaultWorkspaceStore(ctx context.Context, driver, dataSource string) (WorkspaceStore, error) {
+	client, err := models.Open(driver, dataSource)
+	if err != nil {
+		return nil, err
+	}
+	if err := client.Schema.Create(ctx); err != nil {
+		return nil, err
+	}
+	return &internal.DefaultWorkspaceStore{Ctx: ctx, Client: client, Driver: driver, DataSource: dataSource}, nil
 }
 
 func NewDefaultSessionStore(ctx context.Context, driver, dataSource string, keyPairs ...[]byte) (SessionsStore, error) {

@@ -47,6 +47,8 @@ const (
 	FieldMetadata = "metadata"
 	// FieldRoles holds the string denoting the roles field in the database.
 	FieldRoles = "roles"
+	// FieldTeams holds the string denoting the teams field in the database.
+	FieldTeams = "teams"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -54,8 +56,45 @@ const (
 	// FieldLastSigninAt holds the string denoting the last_signin_at field in the database.
 	FieldLastSigninAt = "last_signin_at"
 
+	// EdgeWorkspace holds the string denoting the workspace edge name in mutations.
+	EdgeWorkspace = "workspace"
+	// EdgeWorkspaceRoles holds the string denoting the workspace_roles edge name in mutations.
+	EdgeWorkspaceRoles = "workspace_roles"
+	// EdgeGroupRoles holds the string denoting the group_roles edge name in mutations.
+	EdgeGroupRoles = "group_roles"
+	// EdgeUserRoles holds the string denoting the user_roles edge name in mutations.
+	EdgeUserRoles = "user_roles"
+
 	// Table holds the table name of the user in the database.
 	Table = "usersx"
+	// WorkspaceTable is the table the holds the workspace relation/edge.
+	WorkspaceTable = "workspacesx"
+	// WorkspaceInverseTable is the table name for the Workspace entity.
+	// It exists in this package in order to avoid circular dependency with the "workspace" package.
+	WorkspaceInverseTable = "workspacesx"
+	// WorkspaceColumn is the table column denoting the workspace relation/edge.
+	WorkspaceColumn = "user_workspace"
+	// WorkspaceRolesTable is the table the holds the workspace_roles relation/edge.
+	WorkspaceRolesTable = "workspacerolesx"
+	// WorkspaceRolesInverseTable is the table name for the WorkspaceRole entity.
+	// It exists in this package in order to avoid circular dependency with the "workspacerole" package.
+	WorkspaceRolesInverseTable = "workspacerolesx"
+	// WorkspaceRolesColumn is the table column denoting the workspace_roles relation/edge.
+	WorkspaceRolesColumn = "user_workspace_roles"
+	// GroupRolesTable is the table the holds the group_roles relation/edge.
+	GroupRolesTable = "grouprolesx"
+	// GroupRolesInverseTable is the table name for the GroupRole entity.
+	// It exists in this package in order to avoid circular dependency with the "grouprole" package.
+	GroupRolesInverseTable = "grouprolesx"
+	// GroupRolesColumn is the table column denoting the group_roles relation/edge.
+	GroupRolesColumn = "user_group_roles"
+	// UserRolesTable is the table the holds the user_roles relation/edge.
+	UserRolesTable = "userrolesx"
+	// UserRolesInverseTable is the table name for the UserRole entity.
+	// It exists in this package in order to avoid circular dependency with the "userrole" package.
+	UserRolesInverseTable = "userrolesx"
+	// UserRolesColumn is the table column denoting the user_roles relation/edge.
+	UserRolesColumn = "user_user_roles"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -78,6 +117,7 @@ var Columns = []string{
 	FieldEmailChangeToken,
 	FieldMetadata,
 	FieldRoles,
+	FieldTeams,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldLastSigninAt,

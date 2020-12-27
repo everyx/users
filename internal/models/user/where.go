@@ -7,6 +7,7 @@ import (
 
 	"github.com/adnaan/users/internal/models/predicate"
 	"github.com/facebook/ent/dialect/sql"
+	"github.com/facebook/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -1829,6 +1830,20 @@ func RolesNotNil() predicate.User {
 	})
 }
 
+// TeamsIsNil applies the IsNil predicate on the "teams" field.
+func TeamsIsNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldTeams)))
+	})
+}
+
+// TeamsNotNil applies the NotNil predicate on the "teams" field.
+func TeamsNotNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldTeams)))
+	})
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
@@ -2068,6 +2083,118 @@ func LastSigninAtIsNil() predicate.User {
 func LastSigninAtNotNil() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		s.Where(sql.NotNull(s.C(FieldLastSigninAt)))
+	})
+}
+
+// HasWorkspace applies the HasEdge predicate on the "workspace" edge.
+func HasWorkspace() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WorkspaceTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, WorkspaceTable, WorkspaceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWorkspaceWith applies the HasEdge predicate on the "workspace" edge with a given conditions (other predicates).
+func HasWorkspaceWith(preds ...predicate.Workspace) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WorkspaceInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, WorkspaceTable, WorkspaceColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasWorkspaceRoles applies the HasEdge predicate on the "workspace_roles" edge.
+func HasWorkspaceRoles() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WorkspaceRolesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WorkspaceRolesTable, WorkspaceRolesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWorkspaceRolesWith applies the HasEdge predicate on the "workspace_roles" edge with a given conditions (other predicates).
+func HasWorkspaceRolesWith(preds ...predicate.WorkspaceRole) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WorkspaceRolesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WorkspaceRolesTable, WorkspaceRolesColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasGroupRoles applies the HasEdge predicate on the "group_roles" edge.
+func HasGroupRoles() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GroupRolesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, GroupRolesTable, GroupRolesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGroupRolesWith applies the HasEdge predicate on the "group_roles" edge with a given conditions (other predicates).
+func HasGroupRolesWith(preds ...predicate.GroupRole) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GroupRolesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, GroupRolesTable, GroupRolesColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUserRoles applies the HasEdge predicate on the "user_roles" edge.
+func HasUserRoles() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UserRolesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UserRolesTable, UserRolesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserRolesWith applies the HasEdge predicate on the "user_roles" edge with a given conditions (other predicates).
+func HasUserRolesWith(preds ...predicate.UserRole) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(UserRolesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UserRolesTable, UserRolesColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

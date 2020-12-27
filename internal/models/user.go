@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/adnaan/users/internal/models/user"
+	"github.com/adnaan/users/internal/models/workspace"
 	"github.com/facebook/ent/dialect/sql"
 	"github.com/google/uuid"
 )
@@ -52,12 +53,73 @@ type User struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Roles holds the value of the "roles" field.
 	Roles []string `json:"roles,omitempty"`
+	// Teams holds the value of the "teams" field.
+	Teams map[string]string `json:"teams,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// LastSigninAt holds the value of the "last_signin_at" field.
 	LastSigninAt *time.Time `json:"last_signin_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserQuery when eager-loading is set.
+	Edges UserEdges `json:"edges"`
+}
+
+// UserEdges holds the relations/edges for other nodes in the graph.
+type UserEdges struct {
+	// Workspace holds the value of the workspace edge.
+	Workspace *Workspace
+	// WorkspaceRoles holds the value of the workspace_roles edge.
+	WorkspaceRoles []*WorkspaceRole
+	// GroupRoles holds the value of the group_roles edge.
+	GroupRoles []*GroupRole
+	// UserRoles holds the value of the user_roles edge.
+	UserRoles []*UserRole
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [4]bool
+}
+
+// WorkspaceOrErr returns the Workspace value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) WorkspaceOrErr() (*Workspace, error) {
+	if e.loadedTypes[0] {
+		if e.Workspace == nil {
+			// The edge workspace was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: workspace.Label}
+		}
+		return e.Workspace, nil
+	}
+	return nil, &NotLoadedError{edge: "workspace"}
+}
+
+// WorkspaceRolesOrErr returns the WorkspaceRoles value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) WorkspaceRolesOrErr() ([]*WorkspaceRole, error) {
+	if e.loadedTypes[1] {
+		return e.WorkspaceRoles, nil
+	}
+	return nil, &NotLoadedError{edge: "workspace_roles"}
+}
+
+// GroupRolesOrErr returns the GroupRoles value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) GroupRolesOrErr() ([]*GroupRole, error) {
+	if e.loadedTypes[2] {
+		return e.GroupRoles, nil
+	}
+	return nil, &NotLoadedError{edge: "group_roles"}
+}
+
+// UserRolesOrErr returns the UserRoles value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) UserRolesOrErr() ([]*UserRole, error) {
+	if e.loadedTypes[3] {
+		return e.UserRoles, nil
+	}
+	return nil, &NotLoadedError{edge: "user_roles"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -81,6 +143,7 @@ func (*User) scanValues() []interface{} {
 		&sql.NullString{}, // email_change_token
 		&[]byte{},         // metadata
 		&[]byte{},         // roles
+		&[]byte{},         // teams
 		&sql.NullTime{},   // created_at
 		&sql.NullTime{},   // updated_at
 		&sql.NullTime{},   // last_signin_at
@@ -198,23 +261,51 @@ func (u *User) assignValues(values ...interface{}) error {
 			return fmt.Errorf("unmarshal field roles: %v", err)
 		}
 	}
-	if value, ok := values[17].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field created_at", values[17])
+
+	if value, ok := values[17].(*[]byte); !ok {
+		return fmt.Errorf("unexpected type %T for field teams", values[17])
+	} else if value != nil && len(*value) > 0 {
+		if err := json.Unmarshal(*value, &u.Teams); err != nil {
+			return fmt.Errorf("unmarshal field teams: %v", err)
+		}
+	}
+	if value, ok := values[18].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field created_at", values[18])
 	} else if value.Valid {
 		u.CreatedAt = value.Time
 	}
-	if value, ok := values[18].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field updated_at", values[18])
+	if value, ok := values[19].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field updated_at", values[19])
 	} else if value.Valid {
 		u.UpdatedAt = value.Time
 	}
-	if value, ok := values[19].(*sql.NullTime); !ok {
-		return fmt.Errorf("unexpected type %T for field last_signin_at", values[19])
+	if value, ok := values[20].(*sql.NullTime); !ok {
+		return fmt.Errorf("unexpected type %T for field last_signin_at", values[20])
 	} else if value.Valid {
 		u.LastSigninAt = new(time.Time)
 		*u.LastSigninAt = value.Time
 	}
 	return nil
+}
+
+// QueryWorkspace queries the workspace edge of the User.
+func (u *User) QueryWorkspace() *WorkspaceQuery {
+	return (&UserClient{config: u.config}).QueryWorkspace(u)
+}
+
+// QueryWorkspaceRoles queries the workspace_roles edge of the User.
+func (u *User) QueryWorkspaceRoles() *WorkspaceRoleQuery {
+	return (&UserClient{config: u.config}).QueryWorkspaceRoles(u)
+}
+
+// QueryGroupRoles queries the group_roles edge of the User.
+func (u *User) QueryGroupRoles() *GroupRoleQuery {
+	return (&UserClient{config: u.config}).QueryGroupRoles(u)
+}
+
+// QueryUserRoles queries the user_roles edge of the User.
+func (u *User) QueryUserRoles() *UserRoleQuery {
+	return (&UserClient{config: u.config}).QueryUserRoles(u)
 }
 
 // Update returns a builder for updating this User.
@@ -288,6 +379,8 @@ func (u *User) String() string {
 	builder.WriteString(fmt.Sprintf("%v", u.Metadata))
 	builder.WriteString(", roles=")
 	builder.WriteString(fmt.Sprintf("%v", u.Roles))
+	builder.WriteString(", teams=")
+	builder.WriteString(fmt.Sprintf("%v", u.Teams))
 	builder.WriteString(", created_at=")
 	builder.WriteString(u.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", updated_at=")
