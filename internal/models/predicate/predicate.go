@@ -27,5 +27,8 @@ type UserRole func(*sql.Selector)
 // Workspace is the predicate function for workspace builders.
 type Workspace func(*sql.Selector)
 
+// WorkspaceInvitation is the predicate function for workspaceinvitation builders.
+type WorkspaceInvitation func(*sql.Selector)
+
 // WorkspaceRole is the predicate function for workspacerole builders.
 type WorkspaceRole func(*sql.Selector)

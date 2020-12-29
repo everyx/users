@@ -868,6 +868,9 @@ func (a *API) GetWorkspaceRole(r *http.Request, workspaceID string) (string, err
 }
 
 func (a *API) InviteGuests(r *http.Request, workspaceID string, guests []string) error {
+	return a.invite(workspaceID, "guest", guests)
+}
 
+func (a *API) invite(workspaceID, role string, emails []string) error {
 	return nil
 }

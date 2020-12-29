@@ -100,6 +100,19 @@ func (f WorkspaceFunc) Mutate(ctx context.Context, m models.Mutation) (models.Va
 	return f(ctx, mv)
 }
 
+// The WorkspaceInvitationFunc type is an adapter to allow the use of ordinary
+// function as WorkspaceInvitation mutator.
+type WorkspaceInvitationFunc func(context.Context, *models.WorkspaceInvitationMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WorkspaceInvitationFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.WorkspaceInvitationMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.WorkspaceInvitationMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The WorkspaceRoleFunc type is an adapter to allow the use of ordinary
 // function as WorkspaceRole mutator.
 type WorkspaceRoleFunc func(context.Context, *models.WorkspaceRoleMutation) (models.Value, error)

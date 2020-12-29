@@ -113,6 +113,10 @@ type WorkspaceStore interface {
 	GetUserRoles(userID string) ([]string, error)
 	CreateUserRole(userID, role string) error
 	DeleteUserRole(userID, role string) error
+
+	GetInvitations(email string) (map[string][]string, error)
+	CreateInvitation(workspaceID, email, role string) error
+	DeleteInvitation(workspaceID, email string) error
 }
 
 func NewDefaultUserStore(ctx context.Context, driver, dataSource string) (UserStore, error) {

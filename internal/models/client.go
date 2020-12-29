@@ -17,6 +17,7 @@ import (
 	"github.com/adnaan/users/internal/models/user"
 	"github.com/adnaan/users/internal/models/userrole"
 	"github.com/adnaan/users/internal/models/workspace"
+	"github.com/adnaan/users/internal/models/workspaceinvitation"
 	"github.com/adnaan/users/internal/models/workspacerole"
 
 	"github.com/facebook/ent/dialect"
@@ -43,6 +44,8 @@ type Client struct {
 	UserRole *UserRoleClient
 	// Workspace is the client for interacting with the Workspace builders.
 	Workspace *WorkspaceClient
+	// WorkspaceInvitation is the client for interacting with the WorkspaceInvitation builders.
+	WorkspaceInvitation *WorkspaceInvitationClient
 	// WorkspaceRole is the client for interacting with the WorkspaceRole builders.
 	WorkspaceRole *WorkspaceRoleClient
 }
@@ -65,6 +68,7 @@ func (c *Client) init() {
 	c.User = NewUserClient(c.config)
 	c.UserRole = NewUserRoleClient(c.config)
 	c.Workspace = NewWorkspaceClient(c.config)
+	c.WorkspaceInvitation = NewWorkspaceInvitationClient(c.config)
 	c.WorkspaceRole = NewWorkspaceRoleClient(c.config)
 }
 
@@ -96,16 +100,17 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	}
 	cfg := config{driver: tx, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		Group:         NewGroupClient(cfg),
-		GroupRole:     NewGroupRoleClient(cfg),
-		Permission:    NewPermissionClient(cfg),
-		Session:       NewSessionClient(cfg),
-		User:          NewUserClient(cfg),
-		UserRole:      NewUserRoleClient(cfg),
-		Workspace:     NewWorkspaceClient(cfg),
-		WorkspaceRole: NewWorkspaceRoleClient(cfg),
+		ctx:                 ctx,
+		config:              cfg,
+		Group:               NewGroupClient(cfg),
+		GroupRole:           NewGroupRoleClient(cfg),
+		Permission:          NewPermissionClient(cfg),
+		Session:             NewSessionClient(cfg),
+		User:                NewUserClient(cfg),
+		UserRole:            NewUserRoleClient(cfg),
+		Workspace:           NewWorkspaceClient(cfg),
+		WorkspaceInvitation: NewWorkspaceInvitationClient(cfg),
+		WorkspaceRole:       NewWorkspaceRoleClient(cfg),
 	}, nil
 }
 
@@ -120,15 +125,16 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	}
 	cfg := config{driver: &txDriver{tx: tx, drv: c.driver}, log: c.log, debug: c.debug, hooks: c.hooks}
 	return &Tx{
-		config:        cfg,
-		Group:         NewGroupClient(cfg),
-		GroupRole:     NewGroupRoleClient(cfg),
-		Permission:    NewPermissionClient(cfg),
-		Session:       NewSessionClient(cfg),
-		User:          NewUserClient(cfg),
-		UserRole:      NewUserRoleClient(cfg),
-		Workspace:     NewWorkspaceClient(cfg),
-		WorkspaceRole: NewWorkspaceRoleClient(cfg),
+		config:              cfg,
+		Group:               NewGroupClient(cfg),
+		GroupRole:           NewGroupRoleClient(cfg),
+		Permission:          NewPermissionClient(cfg),
+		Session:             NewSessionClient(cfg),
+		User:                NewUserClient(cfg),
+		UserRole:            NewUserRoleClient(cfg),
+		Workspace:           NewWorkspaceClient(cfg),
+		WorkspaceInvitation: NewWorkspaceInvitationClient(cfg),
+		WorkspaceRole:       NewWorkspaceRoleClient(cfg),
 	}, nil
 }
 
@@ -164,6 +170,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.User.Use(hooks...)
 	c.UserRole.Use(hooks...)
 	c.Workspace.Use(hooks...)
+	c.WorkspaceInvitation.Use(hooks...)
 	c.WorkspaceRole.Use(hooks...)
 }
 
@@ -973,6 +980,94 @@ func (c *WorkspaceClient) QueryGroups(w *Workspace) *GroupQuery {
 // Hooks returns the client hooks.
 func (c *WorkspaceClient) Hooks() []Hook {
 	return c.hooks.Workspace
+}
+
+// WorkspaceInvitationClient is a client for the WorkspaceInvitation schema.
+type WorkspaceInvitationClient struct {
+	config
+}
+
+// NewWorkspaceInvitationClient returns a client for the WorkspaceInvitation from the given config.
+func NewWorkspaceInvitationClient(c config) *WorkspaceInvitationClient {
+	return &WorkspaceInvitationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `workspaceinvitation.Hooks(f(g(h())))`.
+func (c *WorkspaceInvitationClient) Use(hooks ...Hook) {
+	c.hooks.WorkspaceInvitation = append(c.hooks.WorkspaceInvitation, hooks...)
+}
+
+// Create returns a create builder for WorkspaceInvitation.
+func (c *WorkspaceInvitationClient) Create() *WorkspaceInvitationCreate {
+	mutation := newWorkspaceInvitationMutation(c.config, OpCreate)
+	return &WorkspaceInvitationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of WorkspaceInvitation entities.
+func (c *WorkspaceInvitationClient) CreateBulk(builders ...*WorkspaceInvitationCreate) *WorkspaceInvitationCreateBulk {
+	return &WorkspaceInvitationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for WorkspaceInvitation.
+func (c *WorkspaceInvitationClient) Update() *WorkspaceInvitationUpdate {
+	mutation := newWorkspaceInvitationMutation(c.config, OpUpdate)
+	return &WorkspaceInvitationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WorkspaceInvitationClient) UpdateOne(wi *WorkspaceInvitation) *WorkspaceInvitationUpdateOne {
+	mutation := newWorkspaceInvitationMutation(c.config, OpUpdateOne, withWorkspaceInvitation(wi))
+	return &WorkspaceInvitationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WorkspaceInvitationClient) UpdateOneID(id uuid.UUID) *WorkspaceInvitationUpdateOne {
+	mutation := newWorkspaceInvitationMutation(c.config, OpUpdateOne, withWorkspaceInvitationID(id))
+	return &WorkspaceInvitationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for WorkspaceInvitation.
+func (c *WorkspaceInvitationClient) Delete() *WorkspaceInvitationDelete {
+	mutation := newWorkspaceInvitationMutation(c.config, OpDelete)
+	return &WorkspaceInvitationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *WorkspaceInvitationClient) DeleteOne(wi *WorkspaceInvitation) *WorkspaceInvitationDeleteOne {
+	return c.DeleteOneID(wi.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *WorkspaceInvitationClient) DeleteOneID(id uuid.UUID) *WorkspaceInvitationDeleteOne {
+	builder := c.Delete().Where(workspaceinvitation.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WorkspaceInvitationDeleteOne{builder}
+}
+
+// Query returns a query builder for WorkspaceInvitation.
+func (c *WorkspaceInvitationClient) Query() *WorkspaceInvitationQuery {
+	return &WorkspaceInvitationQuery{config: c.config}
+}
+
+// Get returns a WorkspaceInvitation entity by its id.
+func (c *WorkspaceInvitationClient) Get(ctx context.Context, id uuid.UUID) (*WorkspaceInvitation, error) {
+	return c.Query().Where(workspaceinvitation.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WorkspaceInvitationClient) GetX(ctx context.Context, id uuid.UUID) *WorkspaceInvitation {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *WorkspaceInvitationClient) Hooks() []Hook {
+	return c.hooks.WorkspaceInvitation
 }
 
 // WorkspaceRoleClient is a client for the WorkspaceRole schema.

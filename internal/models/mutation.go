@@ -16,6 +16,7 @@ import (
 	"github.com/adnaan/users/internal/models/user"
 	"github.com/adnaan/users/internal/models/userrole"
 	"github.com/adnaan/users/internal/models/workspace"
+	"github.com/adnaan/users/internal/models/workspaceinvitation"
 	"github.com/adnaan/users/internal/models/workspacerole"
 	"github.com/google/uuid"
 
@@ -31,14 +32,15 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeGroup         = "Group"
-	TypeGroupRole     = "GroupRole"
-	TypePermission    = "Permission"
-	TypeSession       = "Session"
-	TypeUser          = "User"
-	TypeUserRole      = "UserRole"
-	TypeWorkspace     = "Workspace"
-	TypeWorkspaceRole = "WorkspaceRole"
+	TypeGroup               = "Group"
+	TypeGroupRole           = "GroupRole"
+	TypePermission          = "Permission"
+	TypeSession             = "Session"
+	TypeUser                = "User"
+	TypeUserRole            = "UserRole"
+	TypeWorkspace           = "Workspace"
+	TypeWorkspaceInvitation = "WorkspaceInvitation"
+	TypeWorkspaceRole       = "WorkspaceRole"
 )
 
 // GroupMutation represents an operation that mutate the Groups
@@ -5946,6 +5948,471 @@ func (m *WorkspaceMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Workspace edge %s", name)
+}
+
+// WorkspaceInvitationMutation represents an operation that mutate the WorkspaceInvitations
+// nodes in the graph.
+type WorkspaceInvitationMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	workspace_id  *uuid.UUID
+	role          *string
+	email         *string
+	created_at    *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*WorkspaceInvitation, error)
+	predicates    []predicate.WorkspaceInvitation
+}
+
+var _ ent.Mutation = (*WorkspaceInvitationMutation)(nil)
+
+// workspaceinvitationOption allows to manage the mutation configuration using functional options.
+type workspaceinvitationOption func(*WorkspaceInvitationMutation)
+
+// newWorkspaceInvitationMutation creates new mutation for WorkspaceInvitation.
+func newWorkspaceInvitationMutation(c config, op Op, opts ...workspaceinvitationOption) *WorkspaceInvitationMutation {
+	m := &WorkspaceInvitationMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeWorkspaceInvitation,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withWorkspaceInvitationID sets the id field of the mutation.
+func withWorkspaceInvitationID(id uuid.UUID) workspaceinvitationOption {
+	return func(m *WorkspaceInvitationMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *WorkspaceInvitation
+		)
+		m.oldValue = func(ctx context.Context) (*WorkspaceInvitation, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().WorkspaceInvitation.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withWorkspaceInvitation sets the old WorkspaceInvitation of the mutation.
+func withWorkspaceInvitation(node *WorkspaceInvitation) workspaceinvitationOption {
+	return func(m *WorkspaceInvitationMutation) {
+		m.oldValue = func(context.Context) (*WorkspaceInvitation, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m WorkspaceInvitationMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m WorkspaceInvitationMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("models: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that, this
+// operation is accepted only on WorkspaceInvitation creation.
+func (m *WorkspaceInvitationMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the id value in the mutation. Note that, the id
+// is available only if it was provided to the builder.
+func (m *WorkspaceInvitationMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetWorkspaceID sets the workspace_id field.
+func (m *WorkspaceInvitationMutation) SetWorkspaceID(u uuid.UUID) {
+	m.workspace_id = &u
+}
+
+// WorkspaceID returns the workspace_id value in the mutation.
+func (m *WorkspaceInvitationMutation) WorkspaceID() (r uuid.UUID, exists bool) {
+	v := m.workspace_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkspaceID returns the old workspace_id value of the WorkspaceInvitation.
+// If the WorkspaceInvitation object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *WorkspaceInvitationMutation) OldWorkspaceID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldWorkspaceID is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldWorkspaceID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkspaceID: %w", err)
+	}
+	return oldValue.WorkspaceID, nil
+}
+
+// ResetWorkspaceID reset all changes of the "workspace_id" field.
+func (m *WorkspaceInvitationMutation) ResetWorkspaceID() {
+	m.workspace_id = nil
+}
+
+// SetRole sets the role field.
+func (m *WorkspaceInvitationMutation) SetRole(s string) {
+	m.role = &s
+}
+
+// Role returns the role value in the mutation.
+func (m *WorkspaceInvitationMutation) Role() (r string, exists bool) {
+	v := m.role
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRole returns the old role value of the WorkspaceInvitation.
+// If the WorkspaceInvitation object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *WorkspaceInvitationMutation) OldRole(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldRole is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldRole requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRole: %w", err)
+	}
+	return oldValue.Role, nil
+}
+
+// ResetRole reset all changes of the "role" field.
+func (m *WorkspaceInvitationMutation) ResetRole() {
+	m.role = nil
+}
+
+// SetEmail sets the email field.
+func (m *WorkspaceInvitationMutation) SetEmail(s string) {
+	m.email = &s
+}
+
+// Email returns the email value in the mutation.
+func (m *WorkspaceInvitationMutation) Email() (r string, exists bool) {
+	v := m.email
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmail returns the old email value of the WorkspaceInvitation.
+// If the WorkspaceInvitation object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *WorkspaceInvitationMutation) OldEmail(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldEmail is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldEmail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmail: %w", err)
+	}
+	return oldValue.Email, nil
+}
+
+// ResetEmail reset all changes of the "email" field.
+func (m *WorkspaceInvitationMutation) ResetEmail() {
+	m.email = nil
+}
+
+// SetCreatedAt sets the created_at field.
+func (m *WorkspaceInvitationMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the created_at value in the mutation.
+func (m *WorkspaceInvitationMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old created_at value of the WorkspaceInvitation.
+// If the WorkspaceInvitation object wasn't provided to the builder, the object is fetched
+// from the database.
+// An error is returned if the mutation operation is not UpdateOne, or database query fails.
+func (m *WorkspaceInvitationMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is allowed only on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt reset all changes of the "created_at" field.
+func (m *WorkspaceInvitationMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// Op returns the operation name.
+func (m *WorkspaceInvitationMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (WorkspaceInvitation).
+func (m *WorkspaceInvitationMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during
+// this mutation. Note that, in order to get all numeric
+// fields that were in/decremented, call AddedFields().
+func (m *WorkspaceInvitationMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.workspace_id != nil {
+		fields = append(fields, workspaceinvitation.FieldWorkspaceID)
+	}
+	if m.role != nil {
+		fields = append(fields, workspaceinvitation.FieldRole)
+	}
+	if m.email != nil {
+		fields = append(fields, workspaceinvitation.FieldEmail)
+	}
+	if m.created_at != nil {
+		fields = append(fields, workspaceinvitation.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name.
+// The second boolean value indicates that this field was
+// not set, or was not define in the schema.
+func (m *WorkspaceInvitationMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case workspaceinvitation.FieldWorkspaceID:
+		return m.WorkspaceID()
+	case workspaceinvitation.FieldRole:
+		return m.Role()
+	case workspaceinvitation.FieldEmail:
+		return m.Email()
+	case workspaceinvitation.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database.
+// An error is returned if the mutation operation is not UpdateOne,
+// or the query to the database was failed.
+func (m *WorkspaceInvitationMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case workspaceinvitation.FieldWorkspaceID:
+		return m.OldWorkspaceID(ctx)
+	case workspaceinvitation.FieldRole:
+		return m.OldRole(ctx)
+	case workspaceinvitation.FieldEmail:
+		return m.OldEmail(ctx)
+	case workspaceinvitation.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown WorkspaceInvitation field %s", name)
+}
+
+// SetField sets the value for the given name. It returns an
+// error if the field is not defined in the schema, or if the
+// type mismatch the field type.
+func (m *WorkspaceInvitationMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case workspaceinvitation.FieldWorkspaceID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkspaceID(v)
+		return nil
+	case workspaceinvitation.FieldRole:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRole(v)
+		return nil
+	case workspaceinvitation.FieldEmail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmail(v)
+		return nil
+	case workspaceinvitation.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown WorkspaceInvitation field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented
+// or decremented during this mutation.
+func (m *WorkspaceInvitationMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was in/decremented
+// from a field with the given name. The second value indicates
+// that this field was not set, or was not define in the schema.
+func (m *WorkspaceInvitationMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value for the given name. It returns an
+// error if the field is not defined in the schema, or if the
+// type mismatch the field type.
+func (m *WorkspaceInvitationMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown WorkspaceInvitation numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared
+// during this mutation.
+func (m *WorkspaceInvitationMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicates if this field was
+// cleared in this mutation.
+func (m *WorkspaceInvitationMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value for the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *WorkspaceInvitationMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown WorkspaceInvitation nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation regarding the
+// given field name. It returns an error if the field is not
+// defined in the schema.
+func (m *WorkspaceInvitationMutation) ResetField(name string) error {
+	switch name {
+	case workspaceinvitation.FieldWorkspaceID:
+		m.ResetWorkspaceID()
+		return nil
+	case workspaceinvitation.FieldRole:
+		m.ResetRole()
+		return nil
+	case workspaceinvitation.FieldEmail:
+		m.ResetEmail()
+		return nil
+	case workspaceinvitation.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown WorkspaceInvitation field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this
+// mutation.
+func (m *WorkspaceInvitationMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all ids (to other nodes) that were added for
+// the given edge name.
+func (m *WorkspaceInvitationMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this
+// mutation.
+func (m *WorkspaceInvitationMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all ids (to other nodes) that were removed for
+// the given edge name.
+func (m *WorkspaceInvitationMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this
+// mutation.
+func (m *WorkspaceInvitationMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean indicates if this edge was
+// cleared in this mutation.
+func (m *WorkspaceInvitationMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value for the given name. It returns an
+// error if the edge name is not defined in the schema.
+func (m *WorkspaceInvitationMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown WorkspaceInvitation unique edge %s", name)
+}
+
+// ResetEdge resets all changes in the mutation regarding the
+// given edge name. It returns an error if the edge is not
+// defined in the schema.
+func (m *WorkspaceInvitationMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown WorkspaceInvitation edge %s", name)
 }
 
 // WorkspaceRoleMutation represents an operation that mutate the WorkspaceRoles

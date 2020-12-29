@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/adnaan/users/internal/models/workspaceinvitation"
+
 	"github.com/adnaan/users/internal/models/userrole"
 
 	"github.com/adnaan/users/internal/models/permission"
@@ -460,4 +462,46 @@ func (d DefaultWorkspaceStore) GetUserPermissions(userID string) (map[string]str
 	}
 
 	return allPermissions, nil
+}
+
+func (d DefaultWorkspaceStore) CreateInvitation(workspaceID, email, role string) error {
+	wid, err := uuid.Parse(workspaceID)
+	if err != nil {
+		return err
+	}
+	_, err = d.Client.WorkspaceInvitation.Create().SetWorkspaceID(wid).SetEmail(email).SetRole(role).Save(d.Ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d DefaultWorkspaceStore) DeleteInvitation(workspaceID, email string) error {
+	wid, err := uuid.Parse(workspaceID)
+	if err != nil {
+		return err
+	}
+	d.Client.WorkspaceInvitation.Delete().Where(workspaceinvitation.And(
+		workspaceinvitation.WorkspaceID(wid), workspaceinvitation.Email(email)))
+	return nil
+}
+
+func (d DefaultWorkspaceStore) GetInvitations(email string) (map[string][]string, error) {
+	wiArr, err := d.Client.WorkspaceInvitation.Query().Where(workspaceinvitation.Email(email)).All(d.Ctx)
+	if err != nil {
+		return nil, err
+	}
+	invitations := make(map[string][]string)
+	for _, wi := range wiArr {
+		ws, err := d.Client.Workspace.Get(d.Ctx, wi.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		invitations[wi.WorkspaceID.String()] = []string{
+			ws.Name,
+			wi.Role,
+		}
+	}
+	return invitations, nil
 }

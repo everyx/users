@@ -26,6 +26,8 @@ type Tx struct {
 	UserRole *UserRoleClient
 	// Workspace is the client for interacting with the Workspace builders.
 	Workspace *WorkspaceClient
+	// WorkspaceInvitation is the client for interacting with the WorkspaceInvitation builders.
+	WorkspaceInvitation *WorkspaceInvitationClient
 	// WorkspaceRole is the client for interacting with the WorkspaceRole builders.
 	WorkspaceRole *WorkspaceRoleClient
 
@@ -170,6 +172,7 @@ func (tx *Tx) init() {
 	tx.User = NewUserClient(tx.config)
 	tx.UserRole = NewUserRoleClient(tx.config)
 	tx.Workspace = NewWorkspaceClient(tx.config)
+	tx.WorkspaceInvitation = NewWorkspaceInvitationClient(tx.config)
 	tx.WorkspaceRole = NewWorkspaceRoleClient(tx.config)
 }
 

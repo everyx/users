@@ -189,6 +189,22 @@ var (
 		},
 		Annotation: &entsql.Annotation{Table: "workspacesx"},
 	}
+	// WorkspaceinvitationsxColumns holds the columns for the "workspaceinvitationsx" table.
+	WorkspaceinvitationsxColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "workspace_id", Type: field.TypeUUID},
+		{Name: "role", Type: field.TypeString},
+		{Name: "email", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// WorkspaceinvitationsxTable holds the schema information for the "workspaceinvitationsx" table.
+	WorkspaceinvitationsxTable = &schema.Table{
+		Name:        "workspaceinvitationsx",
+		Columns:     WorkspaceinvitationsxColumns,
+		PrimaryKey:  []*schema.Column{WorkspaceinvitationsxColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{},
+		Annotation:  &entsql.Annotation{Table: "workspaceinvitationsx"},
+	}
 	// WorkspacerolesxColumns holds the columns for the "workspacerolesx" table.
 	WorkspacerolesxColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -233,6 +249,7 @@ var (
 		UsersxTable,
 		UserrolesxTable,
 		WorkspacesxTable,
+		WorkspaceinvitationsxTable,
 		WorkspacerolesxTable,
 	}
 )
