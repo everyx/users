@@ -33,6 +33,7 @@ const (
 	Recovery
 	ChangeEmail
 	OTP
+	InviteMember
 )
 
 type SendMailFunc func(mailType MailType, token, sendTo string, metadata map[string]interface{}) error

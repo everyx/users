@@ -867,10 +867,43 @@ func (a *API) GetWorkspaceRole(r *http.Request, workspaceID string) (string, err
 	return "", nil
 }
 
-func (a *API) InviteGuests(r *http.Request, workspaceID string, guests []string) error {
-	return a.invite(workspaceID, "guest", guests)
-}
+func (a *API) InviteMembers(r *http.Request, workspaceID string, members []string) error {
 
-func (a *API) invite(workspaceID, role string, emails []string) error {
+	// is user exist by email id, add user to workspace and send notification
+	for _, member := range members {
+		uid, err := a.userStore.UserIDByEmail(member)
+		if err != nil {
+			// user not found. create invitation record to be processed on signup.
+			err = a.workspaceStore.CreateInvitation(workspaceID, member, "member")
+			if err != nil {
+				log.Printf("CreateInvitation err: %+v", err)
+				continue
+			}
+
+		} else {
+			err = a.workspaceStore.WorkspaceUpsertUser(workspaceID, uid, "member")
+			if err != nil {
+				log.Printf("WorkspaceUpsertUser err: %+v", err)
+				continue
+			}
+		}
+
+		name, _, _, err := a.workspaceStore.GetWorkspace(workspaceID)
+		if err != nil {
+			log.Printf("workspaceStore.GetWorkspace err: %+v", err)
+			continue
+		}
+		// send invitation email
+		metadata := map[string]interface{}{
+			"workspace": name,
+		}
+		err = a.sendMail(InviteMember, "", member, metadata)
+		if err != nil {
+			log.Printf("sendMail(InviteMember) err: %+v", err)
+			continue
+		}
+	}
+
+	// is user does not exist, send invitation email
 	return nil
 }
