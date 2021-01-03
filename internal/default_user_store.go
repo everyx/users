@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/adnaan/users/internal/models/workspaceinvitation"
+
 	"github.com/adnaan/users/internal/models"
 	"github.com/adnaan/users/internal/models/user"
 	"github.com/google/uuid"
@@ -100,6 +102,20 @@ func (d *DefaultUserStore) New(email, password, role, provider string, meta map[
 			Save(d.Ctx)
 		if err != nil {
 			return err
+		}
+
+		invitations, err := tx.WorkspaceInvitation.Query().Where(workspaceinvitation.Email(email)).All(d.Ctx)
+		if err == nil {
+			for _, invitation := range invitations {
+				_, err = d.Client.WorkspaceRole.Create().
+					SetName(invitation.Role).
+					SetUserID(usr.ID).
+					SetWorkspaceID(invitation.WorkspaceID).
+					Save(d.Ctx)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		return nil
